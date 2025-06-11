@@ -4,11 +4,13 @@ export type DonationType = 'BITS' | 'RAID' | 'SUBSCRIPTION';
 
 export interface TimerState {
   timerKey: string;
-  timerName: string;
+  timerName?: string;
   currentTime: number;
   status: TimerStatus;
   type: TimerType;
   targetMinutes?: number;
+  formattedTime?: string;
+  lastUpdated: string;
 }
 
 export interface SavedTimerState {
@@ -18,6 +20,8 @@ export interface SavedTimerState {
   currentTime: number;
   status: TimerStatus;
   lastUpdated: string;
+  name?: string;
+  description?: string;
 }
 
 export interface DonationMetadata {
@@ -51,7 +55,7 @@ export interface SaveStateDto {
 
 export interface LoadStateDto {
   timerKey: string;
-  timerName?: string;
+  stateId?: string;
 }
 
 export interface TimerCommandDto {
@@ -65,6 +69,12 @@ export interface TwitchNotificationDto {
   timerName?: string;
   username: string;
   metadata: DonationMetadata;
+}
+
+export interface TimerError {
+  code: string;
+  message: string;
+  details?: any;
 }
 
 // WebSocket Events
@@ -87,13 +97,17 @@ export interface WebSocketEvents {
   'timer.state': TimerState;
   'timer.state_saved': SavedTimerState;
   'timer.saved_states': SavedTimerState[];
+  'timer.error': TimerError;
 }
 
 // Socket.IO Event Types
 export interface ServerToClientEvents {
   'timer.state': (state: TimerState) => void;
+  'timer.update': (time: { currentTime: number; }) => void;
   'timer.state_saved': (state: SavedTimerState) => void;
   'timer.saved_states': (states: SavedTimerState[]) => void;
+  'timer.error': (error: TimerError) => void;
+  [key: string]: (...args: any[]) => void; // Para eventos dinámicos
 }
 
 export interface ClientToServerEvents {
@@ -118,4 +132,18 @@ export interface InterServerEvents {
 export interface SocketData {
   timerKey: string;
   timerName: string;
-} 
+}
+
+export type TimerEventType =
+  | 'TIMER_CREATED'
+  | 'TIMER_STARTED'
+  | 'TIMER_STOPPED'
+  | 'TIMER_PAUSED'
+  | 'TIMER_RESUMED'
+  | 'TIMER_RESET'
+  | 'TIMER_UPDATED'
+  | 'TIMER_ERROR'
+  | 'TIMER_STATE_SAVED'
+  | 'TIMER_STATE_LOADED'
+  | 'TIMER_STATES_LOADED'
+  | 'TIMER_TIME_ADDED';
