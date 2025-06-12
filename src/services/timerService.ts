@@ -390,7 +390,7 @@ class TimerService {
 
     this.socket.on('timer.state', (state: TimerState) => {
       // Si viene con .data, desestructurar
-      const parsedState = ('data' in state && state.data !== undefined) ? { ...state, ...state.data } : state;
+      const parsedState = ('data' in state && state.data !== undefined && typeof state.data === 'object' && state.data !== null) ? { ...state, ...state.data } : state;
       console.log('📊 [Socket] Evento timer.state recibido:', parsedState);
       console.log('🔍 [Socket] Validando estado del timer...');
       if (!this.validateTimerState(parsedState)) {
@@ -804,7 +804,7 @@ class TimerService {
     this.connectionCallbacks = this.connectionCallbacks.filter(cb => cb !== callback);
   }
 
-  async checkTimerExists(): Promise<boolean> {
+  async checkTimerExists(): Promise<TimerState | undefined> {
     try {
       const response = await fetch(`${BASE_URL}/timer/state/${this.timerKey}`);
       if (response.status === 404) {
@@ -815,13 +815,13 @@ class TimerService {
         } else {
           await this.createTimer(DEFAULT_TIMER_TYPE, DEFAULT_INITIAL_TIME);
         }
-        return true;
+        return undefined;
       }
-      const data = await response.json();
-      return data && typeof data.currentTime === 'number';
+      const data = await response.json() as TimerState;
+      return data && typeof data.currentTime === 'number' ? data : undefined;
     } catch (error) {
       console.error('Error al verificar si existe el timer:', error);
-      return false;
+      return undefined;
     }
   }
 
@@ -829,7 +829,8 @@ class TimerService {
     if (!this.socket) {
       throw new Error('No hay conexión con el servidor');
     }
-    this.socket.emit('reset_timer', { timerKey: this.timerKey, timerName: this.timerName });
+    this.resetTimerHttp();
+    this.getTimerStateSocket();
   }
 }
 

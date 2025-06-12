@@ -74,7 +74,7 @@ export interface TwitchNotificationDto {
 export interface TimerError {
   code: string;
   message: string;
-  details?: any;
+  details?: unknown;
 }
 
 // WebSocket Events
@@ -107,7 +107,7 @@ export interface ServerToClientEvents {
   'timer.state_saved': (state: SavedTimerState) => void;
   'timer.saved_states': (states: SavedTimerState[]) => void;
   'timer.error': (error: TimerError) => void;
-  [key: string]: (...args: any[]) => void; // Para eventos dinámicos
+  [key: string]: (...args: unknown[]) => void; // Para eventos dinámicos
 }
 
 export interface ClientToServerEvents {

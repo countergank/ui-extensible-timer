@@ -21,10 +21,6 @@ function App() {
   const [currentTimerKey, setCurrentTimerKey] = useState<string>('twitch');
   const [currentTimerName, setCurrentTimerName] = useState<string>('main-timer');
   const [error, setError] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveStateName, setSaveStateName] = useState('');
-  const [saveStateDescription, setSaveStateDescription] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
   const [errorTimeout, setErrorTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
 
   // Crear una referencia al timerService para evitar recrearlo en cada render
@@ -73,7 +69,6 @@ function App() {
       setIsPaused(isPaused);
       setIsStopped(isStopped);
       setTimerType(data.type);
-      setIsLoading(false);
       setError(null); // Limpiar cualquier error previo
 
       console.log('[TIMER STATE] Actualizado:', {
@@ -95,7 +90,6 @@ function App() {
     } catch (error) {
       console.error('[TIMER ERROR]', error);
       setError(error instanceof Error ? error.message : 'Error al actualizar el temporizador');
-      setIsLoading(false);
     }
   }, []);
 
@@ -126,44 +120,42 @@ function App() {
     }
   };
 
-  const handleConnectionChange = useCallback((connected: boolean) => {
-    setIsConnected(connected);
-    if (!connected) {
-      handleError('Conexión perdida. Intentando reconectar...');
-    } else {
-      setError(null);
-    }
+  const handleConnectionChange = useCallback(async (connected: boolean) => {
+    try {
+      setIsConnected(connected);
+      if (!connected) {
+        handleError('Conexión perdida. Intentando reconectar...');
+      } else {
+        setError(null);
+      }
 
-    if (timerServiceRef.current) {
-      // Verificar si el timer existe
-      timerServiceRef.current.checkTimerExists()
-        .then(exists => {
-          if (!exists) {
-            // Usar variables de entorno con valores por defecto
-            const defaultType = (import.meta.env.VITE_DEFAULT_TIMER_TYPE || 'COUNTDOWN') as TimerType;
-            const defaultTime = Number(import.meta.env.VITE_DEFAULT_INITIAL_TIME) || 60 * 60;
-            const defaultKey = import.meta.env.VITE_DEFAULT_TIMER_KEY || 'main-timer';
+      if (timerServiceRef.current) {
+        // Verificar si el timer existe
+        const state = await timerServiceRef.current?.checkTimerExists()
+        if (state) {
+          handleTimerUpdate(state);
+        }
 
-            setCurrentTimerKey(defaultKey);
-            setCurrentTimerName(timerServiceRef.current?.generateFriendlyName(defaultKey, defaultType) || '');
-            setTimerType(defaultType);
-            setTimer(defaultTime);
+        if (!state) {
+          // Usar variables de entorno con valores por defecto
+          const defaultType = (import.meta.env.VITE_DEFAULT_TIMER_TYPE || 'COUNTDOWN') as TimerType;
+          const defaultTime = Number(import.meta.env.VITE_DEFAULT_INITIAL_TIME) || 60 * 60;
+          const defaultKey = import.meta.env.VITE_DEFAULT_TIMER_KEY || 'main-timer';
 
-            return timerServiceRef.current?.createTimerSocket(defaultType, defaultTime);
-          } else {
-            return timerServiceRef.current?.getTimerStateHttp();
-          }
-        })
-        .then((state: TimerState | undefined) => {
-          if (state) {
-            handleTimerUpdate(state);
-          }
-        })
-        .catch(error => {
-          setError('Error al obtener el estado del timer');
-          setTimer(0);
-          setIsActive(false);
-        });
+          setCurrentTimerKey(defaultKey);
+          setCurrentTimerName(timerServiceRef.current?.generateFriendlyName(defaultKey, defaultType) || '');
+          setTimerType(defaultType);
+          setTimer(defaultTime);
+
+          return timerServiceRef.current?.createTimerSocket(defaultType, defaultTime);
+        } else {
+          return timerServiceRef.current?.getTimerStateHttp();
+        }
+      }
+    } catch {
+      setError('Error al obtener el estado del timer');
+      setTimer(0);
+      setIsActive(false);
     }
   }, [handleTimerUpdate]);
 
@@ -178,10 +170,8 @@ function App() {
         if (state) {
           handleTimerUpdate(state);
         }
-      } catch (error) {
+      } catch {
         setError('Error al obtener el estado inicial del timer');
-      } finally {
-        setIsLoading(false);
       }
     };
 
@@ -261,20 +251,6 @@ function App() {
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
-  const getTimerStatus = () => {
-    if (!isConnected) return 'Desconectado';
-    if (isStopped) return 'Detenido';
-    if (isPaused) return 'Pausado';
-    if (isActive) return 'En ejecución';
-    return 'Desconocido';
-  };
-
-  const getTimerTooltip = () => {
-    const status = getTimerStatus();
-    const type = timerType === 'COUNTDOWN' ? 'Cuenta Regresiva' : 'Cuenta Ascendente';
-    return `${currentTimerName}\nTipo: ${type}\nEstado: ${status}\nTiempo: ${formatTime(timer)}`;
-  };
-
   const handleCreate = () => {
     setShowCreateModal(true);
   };
@@ -300,15 +276,11 @@ function App() {
         // Si está pausado, reanudar
         if (useSocket) {
           timerServiceRef.current.resumeTimerSocket();
-        } else {
-          timerServiceRef.current.resumeTimerHttp();
         }
       } else {
         // Si está detenido, iniciar
         if (useSocket) {
           timerServiceRef.current.startTimerSocket();
-        } else {
-          timerServiceRef.current.startTimerHttp();
         }
       }
     } else {
@@ -330,8 +302,6 @@ function App() {
     if (isActive && !isPaused && !isStopped && timerServiceRef.current) {
       if (useSocket) {
         timerServiceRef.current.pauseTimerSocket();
-      } else {
-        timerServiceRef.current.pauseTimerHttp();
       }
     }
   };
@@ -346,7 +316,7 @@ function App() {
     const description = prompt('Descripción (opcional):');
     if (timerServiceRef.current) {
       timerServiceRef.current.saveStateSocket(name.trim(), description?.trim() || undefined)
-        .catch(error => {
+        .catch(() => {
           setError('Error al guardar el estado');
         });
     }
@@ -355,7 +325,7 @@ function App() {
   const handleLoadState = (stateId?: string) => {
     if (timerServiceRef.current) {
       timerServiceRef.current.loadStateSocket(stateId)
-        .catch(error => {
+        .catch(() => {
           setError('Error al cargar el estado');
         });
     }
@@ -364,7 +334,7 @@ function App() {
   const handleGetSavedStates = () => {
     if (timerServiceRef.current) {
       timerServiceRef.current.getSavedStatesSocket()
-        .catch(error => {
+        .catch(() => {
           setError('Error al obtener estados guardados');
         });
       setShowSavedStates(true);
