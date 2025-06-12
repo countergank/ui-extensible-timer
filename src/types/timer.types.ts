@@ -1,6 +1,6 @@
-export type TimerType = 'COUNTDOWN' | 'COUNTUP';
-export type TimerStatus = 'RUNNING' | 'PAUSED' | 'STOPPED';
-export type DonationType = 'BITS' | 'RAID' | 'SUBSCRIPTION';
+export type TimerType = "COUNTDOWN" | "COUNTUP";
+export type TimerStatus = "RUNNING" | "PAUSED" | "STOPPED";
+export type DonationType = "BITS" | "RAID" | "SUBSCRIPTION";
 
 export interface TimerState {
   timerKey: string;
@@ -64,7 +64,7 @@ export interface TimerCommandDto {
 }
 
 export interface TwitchNotificationDto {
-  type: 'bits' | 'subscription' | 'raid';
+  type: "bits" | "subscription" | "raid";
   timerKey: string;
   timerName?: string;
   username: string;
@@ -80,49 +80,49 @@ export interface TimerError {
 // WebSocket Events
 export interface WebSocketEvents {
   // Client to Server
-  'create_timer': CreateTimerDto;
-  'start_timer': TimerCommandDto;
-  'stop_timer': TimerCommandDto;
-  'pause_timer': TimerCommandDto;
-  'resume_timer': TimerCommandDto;
-  'save_state': SaveStateDto;
-  'load_state': LoadStateDto;
-  'get_saved_states': { timerKey: string; };
-  'add_time': AddTimeDto;
-  'get_time': TimerCommandDto;
-  'get_timer_state': TimerCommandDto;
-  'get_all_timers': { timerKey: string; };
+  create_timer: CreateTimerDto;
+  start_timer: TimerCommandDto;
+  reset_timer: TimerCommandDto;
+  pause_timer: TimerCommandDto;
+  resume_timer: TimerCommandDto;
+  save_state: SaveStateDto;
+  load_state: LoadStateDto;
+  get_saved_states: { timerKey: string };
+  add_time: AddTimeDto;
+  get_time: TimerCommandDto;
+  get_timer_state: TimerCommandDto;
+  get_all_timers: { timerKey: string };
 
   // Server to Client
-  'timer.state': TimerState;
-  'timer.state_saved': SavedTimerState;
-  'timer.saved_states': SavedTimerState[];
-  'timer.error': TimerError;
+  "timer.state": TimerState;
+  "timer.state_saved": SavedTimerState;
+  "timer.saved_states": SavedTimerState[];
+  "timer.error": TimerError;
 }
 
 // Socket.IO Event Types
 export interface ServerToClientEvents {
-  'timer.state': (state: TimerState) => void;
-  'timer.update': (time: { currentTime: number; }) => void;
-  'timer.state_saved': (state: SavedTimerState) => void;
-  'timer.saved_states': (states: SavedTimerState[]) => void;
-  'timer.error': (error: TimerError) => void;
+  "timer.state": (state: TimerState) => void;
+  "timer.update": (time: { currentTime: number }) => void;
+  "timer.state_saved": (state: SavedTimerState) => void;
+  "timer.saved_states": (states: SavedTimerState[]) => void;
+  "timer.error": (error: TimerError) => void;
   [key: string]: (...args: unknown[]) => void; // Para eventos dinámicos
 }
 
 export interface ClientToServerEvents {
-  'create_timer': (dto: CreateTimerDto) => void;
-  'start_timer': (dto: TimerCommandDto) => void;
-  'stop_timer': (dto: TimerCommandDto) => void;
-  'pause_timer': (dto: TimerCommandDto) => void;
-  'resume_timer': (dto: TimerCommandDto) => void;
-  'save_state': (dto: SaveStateDto) => void;
-  'load_state': (dto: LoadStateDto) => void;
-  'get_saved_states': (dto: { timerKey: string; }) => void;
-  'add_time': (dto: AddTimeDto) => void;
-  'get_time': (dto: TimerCommandDto) => void;
-  'get_timer_state': (dto: TimerCommandDto) => void;
-  'get_all_timers': (dto: { timerKey: string; }) => void;
+  create_timer: (dto: CreateTimerDto) => void;
+  start_timer: (dto: TimerCommandDto) => void;
+  reset_timer: (dto: TimerCommandDto) => void;
+  pause_timer: (dto: TimerCommandDto) => void;
+  resume_timer: (dto: TimerCommandDto) => void;
+  save_state: (dto: SaveStateDto) => void;
+  load_state: (dto: LoadStateDto) => void;
+  get_saved_states: (dto: { timerKey: string }) => void;
+  add_time: (dto: AddTimeDto) => void;
+  get_time: (dto: TimerCommandDto) => void;
+  get_timer_state: (dto: TimerCommandDto) => void;
+  get_all_timers: (dto: { timerKey: string }) => void;
 }
 
 export interface InterServerEvents {
@@ -135,15 +135,15 @@ export interface SocketData {
 }
 
 export type TimerEventType =
-  | 'TIMER_CREATED'
-  | 'TIMER_STARTED'
-  | 'TIMER_STOPPED'
-  | 'TIMER_PAUSED'
-  | 'TIMER_RESUMED'
-  | 'TIMER_RESET'
-  | 'TIMER_UPDATED'
-  | 'TIMER_ERROR'
-  | 'TIMER_STATE_SAVED'
-  | 'TIMER_STATE_LOADED'
-  | 'TIMER_STATES_LOADED'
-  | 'TIMER_TIME_ADDED';
+  | "TIMER_CREATED"
+  | "TIMER_STARTED"
+  | "TIMER_STOPPED"
+  | "TIMER_PAUSED"
+  | "TIMER_RESUMED"
+  | "TIMER_RESET"
+  | "TIMER_UPDATED"
+  | "TIMER_ERROR"
+  | "TIMER_STATE_SAVED"
+  | "TIMER_STATE_LOADED"
+  | "TIMER_STATES_LOADED"
+  | "TIMER_TIME_ADDED";
