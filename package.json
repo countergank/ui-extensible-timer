@@ -4,8 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "start:dev": "vite",
     "build": "tsc -b && vite build",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "start:dev": "vite",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -16,6 +17,7 @@
     "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
     "@eslint/js": "^9.25.0",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",

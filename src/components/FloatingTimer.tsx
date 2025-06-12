@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import type { TimerType } from '../types/timer.types';
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { TimerType } from "../types/timer.types";
 
 interface FloatingTimerProps {
   timer: number;
@@ -20,7 +20,7 @@ export function FloatingTimer({
   isPaused,
   isStopped,
   isConnected,
-  formatTime
+  formatTime,
 }: FloatingTimerProps) {
   const [position, setPosition] = useState({ x: 20, y: 20 });
   const [isDragging, setIsDragging] = useState(false);
@@ -29,7 +29,7 @@ export function FloatingTimer({
 
   // Cargar posición guardada al iniciar
   useEffect(() => {
-    const savedPosition = localStorage.getItem('timerPosition');
+    const savedPosition = localStorage.getItem("timerPosition");
     if (savedPosition) {
       setPosition(JSON.parse(savedPosition));
     }
@@ -37,20 +37,21 @@ export function FloatingTimer({
 
   // Guardar posición cuando cambia
   useEffect(() => {
-    localStorage.setItem('timerPosition', JSON.stringify(position));
+    localStorage.setItem("timerPosition", JSON.stringify(position));
   }, [position]);
 
   const getTimerStatus = () => {
-    if (!isConnected) return 'Desconectado';
-    if (isStopped) return 'Detenido';
-    if (isPaused) return 'Pausado';
-    if (isActive) return 'En ejecución';
-    return 'Desconocido';
+    if (!isConnected) return "Desconectado";
+    if (isStopped) return "Detenido";
+    if (isPaused) return "Pausado";
+    if (isActive) return "En ejecución";
+    return "Desconocido";
   };
 
   const getTimerTooltip = () => {
     const status = getTimerStatus();
-    const type = timerType === 'COUNTDOWN' ? 'Cuenta Regresiva' : 'Cuenta Ascendente';
+    const type =
+      timerType === "COUNTDOWN" ? "Cuenta Regresiva" : "Cuenta Ascendente";
     return `${timerName}\nTipo: ${type}\nEstado: ${status}\nTiempo: ${formatTime(timer)}`;
   };
 
@@ -59,45 +60,48 @@ export function FloatingTimer({
       const rect = timerRef.current.getBoundingClientRect();
       setDragOffset({
         x: e.clientX - rect.left,
-        y: e.clientY - rect.top
+        y: e.clientY - rect.top,
       });
       setIsDragging(true);
     }
   };
 
-  const handleMouseMove = (e: MouseEvent) => {
-    if (isDragging) {
-      setPosition({
-        x: e.clientX - dragOffset.x,
-        y: e.clientY - dragOffset.y
-      });
-    }
-  };
+  const handleMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (isDragging) {
+        setPosition({
+          x: e.clientX - dragOffset.x,
+          y: e.clientY - dragOffset.y,
+        });
+      }
+    },
+    [isDragging, dragOffset],
+  );
 
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     setIsDragging(false);
-  };
+  }, []);
 
   useEffect(() => {
     if (isDragging) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
     }
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isDragging]);
+  }, [isDragging, handleMouseUp, handleMouseMove]);
 
   return (
     <div
       ref={timerRef}
-      className={`floating-timer ${isDragging ? 'dragging' : ''}`}
+      className={`floating-timer ${isDragging ? "dragging" : ""}`}
       style={{
-        position: 'fixed',
+        position: "fixed",
         left: `${position.x}px`,
         top: `${position.y}px`,
-        cursor: isDragging ? 'grabbing' : 'grab'
+        cursor: isDragging ? "grabbing" : "grab",
       }}
       onMouseDown={handleMouseDown}
       title={getTimerTooltip()}
@@ -107,7 +111,7 @@ export function FloatingTimer({
         <span className="timer-status">{getTimerStatus()}</span>
       </div>
       <div
-        className={`timer ${isActive ? 'active' : 'inactive'} ${!isConnected ? 'disconnected' : ''}`}
+        className={`timer ${isActive ? "active" : "inactive"} ${!isConnected ? "disconnected" : ""}`}
       >
         {formatTime(timer)}
       </div>
