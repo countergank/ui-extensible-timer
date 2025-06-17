@@ -1,5 +1,6 @@
 import type React from "react";
 import "./IconButton.css";
+import Tooltip from "./Tooltip";
 
 interface IconButtonProps {
   icon: React.ReactNode;
@@ -10,20 +11,21 @@ interface IconButtonProps {
 
 const IconButton: React.FC<IconButtonProps> = ({
   icon,
-  tooltip,
   onClick,
   disabled,
+  tooltip,
 }) => {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="icon-button"
-      title={tooltip}
-      disabled={disabled}
-    >
-      {icon}
-    </button>
+    <Tooltip text={tooltip}>
+      <button
+        type="button"
+        onClick={onClick}
+        className="icon-button"
+        disabled={disabled}
+      >
+        {icon}
+      </button>
+    </Tooltip>
   );
 };
 

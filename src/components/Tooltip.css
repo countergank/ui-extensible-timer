@@ -6,7 +6,8 @@
 .tooltip {
   position: absolute;
   z-index: 1;
-  bottom: 100%;
+  bottom: auto;
+  top: 100%;
   left: 50%;
   transform: translateX(-50%);
   padding: 8px 12px;
@@ -14,10 +15,12 @@
   color: #fff;
   border-radius: 4px;
   font-size: 0.8em;
-  white-space: nowrap;
+  white-space: normal;
   margin-bottom: 5px;
   opacity: 0;
   visibility: hidden;
+  display: flex;
+  flex-direction: column;
   transition: opacity 0.2s, visibility 0.2s;
 }
 
