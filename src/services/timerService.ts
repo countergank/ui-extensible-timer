@@ -66,7 +66,6 @@ class TimerService {
     currentTime: 0,
     type: "COUNTDOWN",
     status: "STOPPED",
-    lastUpdated: new Date().toISOString(),
     timerKey: DEFAULT_TIMER_KEY,
   };
 
@@ -163,7 +162,7 @@ class TimerService {
     try {
       await this.connect();
       this.currentReconnectAttempt = 0; // Resetear el contador de intentos al conectar exitosamente
-      console.log("✅ Conexión establecida exitosamente");
+      console.info("✅ Conexión establecida exitosamente");
       return true;
     } catch (error) {
       console.error("❌ Error al intentar conectar:", error);
@@ -184,16 +183,16 @@ class TimerService {
 
   private async processQueue() {
     if (!this.socket?.connected) {
-      console.log("⚠️ No hay conexión, no se puede procesar la cola");
+      console.warn("⚠️ No hay conexión, no se puede procesar la cola");
       return;
     }
 
     if (this.operationQueue.length === 0) {
-      console.log("✅ Cola de operaciones vacía");
+      console.info("✅ Cola de operaciones vacía");
       return;
     }
 
-    console.log(
+    console.info(
       `🔄 Procesando cola de operaciones (${this.operationQueue.length} pendientes)...`,
     );
 
@@ -201,14 +200,14 @@ class TimerService {
       const operation = this.operationQueue.shift();
       if (operation) {
         try {
-          console.log("▶️ Ejecutando operación pendiente...");
+          console.info("▶️ Ejecutando operación pendiente...");
           await operation();
-          console.log("✅ Operación completada exitosamente");
+          console.info("✅ Operación completada exitosamente");
         } catch (error) {
           console.error("❌ Error al procesar operación:", error);
           // Reinsertar la operación al principio de la cola
           this.operationQueue.unshift(operation);
-          console.log("⚠️ Operación reinsertada en la cola");
+          console.warn("⚠️ Operación reinsertada en la cola");
           break;
         }
       }
@@ -216,14 +215,14 @@ class TimerService {
   }
 
   private queueOperation(operation: () => Promise<void>) {
-    console.log("📝 Encolando nueva operación...");
+    console.info("📝 Encolando nueva operación...");
     this.operationQueue.push(operation);
 
     // Intentar procesar la cola inmediatamente si hay conexión
     if (this.socket?.connected) {
       this.processQueue();
     } else {
-      console.log("⚠️ No hay conexión, operación encolada para más tarde");
+      console.warn("⚠️ No hay conexión, operación encolada para más tarde");
     }
   }
 
@@ -256,63 +255,44 @@ class TimerService {
 
   private handleTimerStateUpdate = (data: TimerState) => {
     try {
-      console.log("📊 [Timer State] Estado recibido:", {
-        currentTime: data.currentTime,
-        type: data.type,
-        status: data.status,
-        timerKey: data.timerKey,
-        lastUpdated: data.lastUpdated,
-      });
-
       // Validar el estado recibido
       if (!this.validateTimerState(data)) {
         throw new Error("Estado del timer inválido");
       }
 
-      // Actualizar el estado local solo si el nuevo estado es más reciente
-      const currentLastUpdated = this.timerState.lastUpdated
-        ? new Date(this.timerState.lastUpdated).getTime()
-        : 0;
-      const newLastUpdated = new Date(data.lastUpdated).getTime();
+      console.debug("📊 [Timer State] Estado recibido:", {
+        currentTime: data.currentTime,
+        type: data.type,
+        status: data.status,
+        timerKey: data.timerKey,
+      });
 
-      if (newLastUpdated >= currentLastUpdated) {
-        // Mantener el tiempo actual cuando se pausa
-        const shouldKeepCurrentTime =
-          data.status === "PAUSED" && this.timerState.status === "RUNNING";
-        const newCurrentTime = shouldKeepCurrentTime
-          ? this.timerState.currentTime
-          : data.currentTime;
+      // Usar directamente el tiempo que viene del servidor
+      this.timerState = {
+        ...data, // Usar todo el estado que viene del servidor
+        timerKey: data.timerKey || this.timerKey, // Asegurar que el timerKey esté presente
+      };
 
-        this.timerState = {
-          ...this.timerState,
-          currentTime: newCurrentTime,
-          type: data.type,
-          status: data.status,
-          lastUpdated: data.lastUpdated,
-          timerKey: data.timerKey,
-        };
+      // Guardar el último estado válido
+      this.lastTimerState = this.timerState;
 
-        // Guardar el último estado válido
-        this.lastTimerState = this.timerState;
-
-        // Notificar a los suscriptores
-        try {
-          for (const timerCallbacks of this.timerCallbacks) {
-            timerCallbacks(this.timerState);
-          }
-        } catch (error) {
-          console.error("❌ [Timer State] Error en callback:", error);
+      // Notificar a los suscriptores
+      try {
+        console.debug(
+          "🔔 [Timer State] Notificando a",
+          this.timerCallbacks.length,
+          "callbacks",
+        );
+        for (const timerCallback of this.timerCallbacks) {
+          timerCallback(this.timerState);
         }
-      } else {
-        console.log("⚠️ [Timer State] Ignorando estado anterior:", {
-          current: currentLastUpdated,
-          new: newLastUpdated,
-        });
+      } catch (error) {
+        console.error("❌ [Timer State] Error en callback:", error);
       }
     } catch (error) {
       console.error("❌ [Timer State] Error al procesar estado:", error);
-      for (const errorCallbacks of this.errorCallbacks) {
-        errorCallbacks({
+      for (const errorCallback of this.errorCallbacks) {
+        errorCallback({
           message:
             error instanceof Error
               ? error.message
@@ -324,11 +304,11 @@ class TimerService {
   };
 
   connect() {
-    console.log("🔄 Iniciando conexión Socket.IO a:", BASE_URL);
+    console.info("🔄 Iniciando conexión Socket.IO a:", BASE_URL);
 
     // Limpiar socket existente si hay uno
     if (this.socket) {
-      console.log("🧹 Limpiando conexión Socket.IO existente");
+      console.info("🧹 Limpiando conexión Socket.IO existente");
       this.socket.disconnect();
       this.socket = null;
     }
@@ -351,11 +331,11 @@ class TimerService {
 
     // Agregar listeners para diagnóstico
     this.socket.io.on("reconnect_attempt", (attempt) => {
-      console.log(`🔄 Intento de reconexión #${attempt}`);
+      console.info(`🔄 Intento de reconexión #${attempt}`);
     });
 
     this.socket.io.on("reconnect", (attempt) => {
-      console.log(`✅ Reconectado después de ${attempt} intentos`);
+      console.info(`✅ Reconectado después de ${attempt} intentos`);
     });
 
     this.socket.io.on("reconnect_error", (error) => {
@@ -366,37 +346,25 @@ class TimerService {
       console.error("❌ Falló la reconexión después de todos los intentos");
     });
 
-    // this.socket.io.on('ping', () => {
-    //   console.log('📡 Ping enviado');
-    // });
+    this.socket.io.on("ping", () => {
+      console.info("📡 Ping enviado");
+    });
 
     this.socket.on("connect", () => {
-      console.log("✅ Conectado a Socket.IO");
-      console.log("📡 ID del socket:", this.socket?.id);
-      console.log("🔌 Estado de la conexión:", this.socket?.connected);
-      console.log(
-        "🔄 Transporte actual:",
-        this.socket?.io.engine.transport.name,
-      );
+      console.info("✅ Conectado a Socket.IO");
       this.isConnecting = false;
       this.currentReconnectAttempt = 0;
-      for (const connectionCallbacks of this.connectionCallbacks) {
-        connectionCallbacks(true);
+      for (const connectionCallback of this.connectionCallbacks) {
+        connectionCallback(true);
       }
-      this.restoreSubscriptions();
       this.processQueue();
     });
 
     this.socket.on("disconnect", (reason) => {
-      console.log("❌ Desconectado de Socket.IO. Razón:", reason);
-      console.log(
-        "🔄 Transporte anterior:",
-        this.socket?.io.engine.transport.name,
-      );
-      for (const connectionCallbacks of this.connectionCallbacks) {
-        connectionCallbacks(false);
+      console.info("❌ Desconectado de Socket.IO. Razón:", reason);
+      for (const connectionCallback of this.connectionCallbacks) {
+        connectionCallback(false);
       }
-      // Si la desconexión no fue iniciada por el cliente, intentar reconectar
       if (reason !== "io client disconnect") {
         this.scheduleReconnect();
       }
@@ -414,51 +382,58 @@ class TimerService {
       this.handleConnectionError(new Error("Error general de Socket.IO"));
     });
 
-    // Manejo de actualizaciones del timer
-    this.socket.on("timer.update", (time: { currentTime: number }) => {
-      console.log("⏱️ [Socket] Evento timer.update recibido:", time);
-      if (time && typeof time.currentTime === "number" && this.lastTimerState) {
-        const updatedState: TimerState = {
-          ...this.lastTimerState,
-          currentTime: time.currentTime,
-          lastUpdated: new Date().toISOString(),
-          timerKey: this.timerKey,
-          type: this.lastTimerState.type,
-          status: this.lastTimerState.status,
-        };
-        this.handleTimerStateUpdate(updatedState);
-      }
-    });
+    this.socket.on(
+      "timer.update",
+      (data: { currentTime: number } | TimerState) => {
+        console.debug("⏱️ [Socket] Evento timer.update recibido:", data);
 
-    this.socket.on("timer.state", (state: TimerState) => {
-      // Si viene con .data, desestructurar
-      const parsedState =
-        "data" in state &&
-        state.data !== undefined &&
-        typeof state.data === "object" &&
-        state.data !== null
-          ? { ...state, ...state.data }
-          : state;
-      console.log("📊 [Socket] Evento timer.state recibido:", parsedState);
-      console.log("🔍 [Socket] Validando estado del timer...");
-      if (!this.validateTimerState(parsedState)) {
-        console.error("❌ [Socket] Estado del timer inválido:", parsedState);
-        return;
-      }
-      console.log("✅ [Socket] Estado del timer válido, actualizando...");
-      this.handleTimerStateUpdate(parsedState);
-    });
+        // Si es solo un update de tiempo
+        if (
+          "currentTime" in data &&
+          typeof data.currentTime === "number" &&
+          this.lastTimerState
+        ) {
+          const updatedState: TimerState = {
+            ...this.lastTimerState,
+            currentTime: data.currentTime,
+          };
+          this.handleTimerStateUpdate(updatedState);
+        }
+        // Si es un estado completo
+        else if (this.validateTimerState(data as TimerState)) {
+          this.handleTimerStateUpdate(data as TimerState);
+        }
+      },
+    );
+
+    this.socket.on(
+      "timer.state",
+      (state: TimerState | { data: TimerState }) => {
+        console.debug("📊 [Socket] Evento timer.state recibido:", state);
+
+        // Si viene con .data, desestructurar
+        const parsedState =
+          "data" in state && state.data ? state.data : (state as TimerState);
+
+        if (!this.validateTimerState(parsedState)) {
+          console.error("❌ [Socket] Estado del timer inválido:", parsedState);
+          return;
+        }
+
+        this.handleTimerStateUpdate(parsedState);
+      },
+    );
 
     // Escuchar eventos de tiempo específicos para este timer
     const specificTimerEvent = `timer.${this.timerKey}.${this.timerName}.time`;
-    console.log(
+    console.debug(
       "🎯 [Socket] Suscrito a evento específico:",
       specificTimerEvent,
     );
     this.socket.on(
       specificTimerEvent,
       (time: { currentTime: number; formattedTime: string }) => {
-        console.log("⏱️ [Socket] Evento específico recibido:", time);
+        console.debug("⏱️ [Socket] Evento específico recibido:", time);
         if (
           time &&
           typeof time.currentTime === "number" &&
@@ -467,7 +442,6 @@ class TimerService {
           const updatedState: TimerState = {
             ...this.lastTimerState,
             currentTime: time.currentTime,
-            lastUpdated: new Date().toISOString(),
           };
           this.handleTimerStateUpdate(updatedState);
         }
@@ -476,59 +450,20 @@ class TimerService {
 
     // Escuchar eventos de estados guardados
     this.socket.on("timer.state_saved", (state: SavedTimerState) => {
-      console.log("💾 Estado guardado:", state);
+      console.info("💾 Estado guardado:", state);
       for (const savedStatesCallbacks of this.savedStatesCallbacks) {
         savedStatesCallbacks([state]);
       }
     });
 
     this.socket.on("timer.saved_states", (states: SavedTimerState[]) => {
-      console.log("📚 Estados guardados recibidos:", states);
+      console.info("📚 Estados guardados recibidos:", states);
       for (const savedStatesCallbacks of this.savedStatesCallbacks) {
         savedStatesCallbacks(states);
       }
     });
 
-    // Log genérico para cualquier otro evento
-    this.socket.onAny((event, ...args) => {
-      if (
-        ![
-          "timer.state",
-          "timer.state_saved",
-          "timer.saved_states",
-          "error",
-          "connect_error",
-        ].includes(event) &&
-        !(event.startsWith("timer.") && event.endsWith(".time"))
-      ) {
-        console.log("📡 [Socket] Evento recibido:", event, args);
-      }
-    });
-
     return this.socket;
-  }
-
-  private restoreSubscriptions() {
-    if (!this.socket) return;
-
-    // Restaurar suscripciones al timer
-    for (const timerCallbacks of this.timerCallbacks) {
-      this.socket?.on("timer.state", timerCallbacks);
-    }
-
-    // Restaurar suscripciones al timer
-    for (const savedStatesCallbacks of this.savedStatesCallbacks) {
-      this.socket?.on("timer.saved_states", savedStatesCallbacks);
-    }
-
-    // Si hay un estado guardado, notificar a los callbacks
-    if (this.lastTimerState) {
-      for (const callback of this.timerCallbacks) {
-        if (this.lastTimerState) {
-          callback(this.lastTimerState);
-        }
-      }
-    }
   }
 
   disconnect() {
@@ -540,7 +475,7 @@ class TimerService {
     this.currentReconnectAttempt = 0;
     this.lastTimerState = null;
     if (this.socket) {
-      console.log("🔌 Desconectando Socket.IO");
+      console.info("🔌 Desconectando Socket.IO");
       this.socket.disconnect();
       this.socket = null;
     }
@@ -555,7 +490,7 @@ class TimerService {
       initialTime,
     };
 
-    console.log("🆕 Creando temporizador (HTTP):", dto);
+    console.info("🆕 Creando temporizador (HTTP):", dto);
     const response = await fetch(`${BASE_URL}/timer/create`, {
       method: "POST",
       headers: {
@@ -568,7 +503,7 @@ class TimerService {
 
   public async getTimerStateHttp(): Promise<TimerState | undefined> {
     try {
-      console.log("📊 Obteniendo estado del temporizador (HTTP)");
+      console.info("📊 Obteniendo estado del temporizador (HTTP)");
       const response = await fetch(`${BASE_URL}/timer/state/${this.timerKey}`);
 
       if (!response.ok) {
@@ -589,7 +524,7 @@ class TimerService {
   }
 
   async getDonationsHttp() {
-    console.log("💰 Obteniendo donaciones (HTTP)");
+    console.info("💰 Obteniendo donaciones (HTTP)");
     const response = await fetch(
       `${BASE_URL}/timer/donations/${this.timerKey}`,
     );
@@ -597,7 +532,7 @@ class TimerService {
   }
 
   async getSavedStatesHttp() {
-    console.log("💾 Obteniendo estados guardados (HTTP)");
+    console.info("💾 Obteniendo estados guardados (HTTP)");
     const response = await fetch(
       `${BASE_URL}/timer/saved-states?timerKey=${this.timerKey}`,
     );
@@ -706,17 +641,17 @@ class TimerService {
       initialTime,
     };
 
-    console.log("🆕 Creando temporizador (Socket):", dto);
+    console.info("🆕 Creando temporizador (Socket):", dto);
     this.socket.emit("create_timer", dto);
   }
 
   public startTimerSocket = () => {
-    console.log("▶️ [Socket] Intentando iniciar temporizador:", {
+    console.info("▶️ [Socket] Intentando iniciar temporizador:", {
       timerKey: this.timerKey,
       timerName: this.timerName,
     });
-    console.log("🔌 [Socket] Estado de conexión:", this.socket?.connected);
-    console.log("📡 ID del socket:", this.socket?.id);
+    console.info("🔌 [Socket] Estado de conexión:", this.socket?.connected);
+    console.info("📡 ID del socket:", this.socket?.id);
 
     if (!this.socket?.connected) {
       console.error("❌ [Socket] No hay conexión activa");
@@ -739,7 +674,7 @@ class TimerService {
         timerKey: this.timerKey,
         timerName: this.timerName,
       };
-      console.log("⏸️ Pausando temporizador (Socket):", dto);
+      console.info("⏸️ Pausando temporizador (Socket):", dto);
       this.socket?.emit("pause_timer", dto);
     };
 
@@ -760,7 +695,7 @@ class TimerService {
         timerKey: this.timerKey,
         timerName: this.timerName,
       };
-      console.log("▶️ Reanudando temporizador (Socket):", dto);
+      console.info("▶️ Reanudando temporizador (Socket):", dto);
       this.socket?.emit("resume_timer", dto);
     };
 
@@ -781,7 +716,7 @@ class TimerService {
         timerKey: this.timerKey,
         timerName: this.timerName,
       };
-      console.log("▶️ Reanudando temporizador (Socket):", dto);
+      console.info("▶️ Reestableciendo temporizador (Socket):", dto);
       this.socket?.emit("reset_timer", dto);
     };
 
@@ -809,7 +744,7 @@ class TimerService {
         type,
         metadata,
       };
-      console.log("⏱️ Añadiendo tiempo (Socket):", dto);
+      console.info("⏱️ Añadiendo tiempo (Socket):", dto);
       this.socket?.emit("add_time", dto);
     };
 
@@ -835,7 +770,7 @@ class TimerService {
         name,
         description,
       };
-      console.log("💾 Guardando estado (Socket):", dto);
+      console.info("💾 Guardando estado (Socket):", dto);
       this.socket?.emit("save_state", dto);
     };
 
@@ -850,13 +785,12 @@ class TimerService {
     await operation();
   }
 
-  async loadStateSocket(stateId?: string): Promise<void> {
+  async loadStateSocket(): Promise<void> {
     const operation = async () => {
       const dto: LoadStateDto = {
         timerKey: this.timerKey,
-        stateId,
       };
-      console.log("📂 Cargando estado (Socket):", dto);
+      console.info("📂 Cargando estado (Socket):", dto);
       this.socket?.emit("load_state", dto);
     };
 
@@ -874,7 +808,7 @@ class TimerService {
   async getSavedStatesSocket(): Promise<SavedTimerState[]> {
     const operation = async () => {
       const dto = { timerKey: this.timerKey };
-      console.log("📚 Obteniendo estados guardados (Socket)");
+      console.info("📚 Obteniendo estados guardados (Socket)");
       this.socket?.emit("get_saved_states", dto);
     };
 
@@ -896,7 +830,7 @@ class TimerService {
         timerKey: this.timerKey,
         timerName: this.timerName,
       };
-      console.log("📊 Obteniendo estado del temporizador (Socket)");
+      console.info("📊 Obteniendo estado del temporizador (Socket)");
       this.socket?.emit("get_timer_state", dto);
     };
 
@@ -911,23 +845,26 @@ class TimerService {
     await operation();
   }
 
-  // Suscripciones
-  subscribeToTimer(callback: (state: TimerState) => void) {
+  subscribeToTimerUpdate(callback: (state: TimerState) => void) {
+    console.info("📝 Suscribiendo a actualizaciones del timer");
     this.timerCallbacks.push(callback);
 
-    if (this.socket?.connected) {
-      this.socket.on("timer.state", callback);
-      // Notificar estado actual si existe
-      if (this.lastTimerState) {
+    // Si hay un estado actual, notificar inmediatamente
+    if (this.lastTimerState) {
+      console.info("📤 Notificando estado actual al nuevo suscriptor");
+      try {
         callback(this.lastTimerState);
+      } catch (error) {
+        console.error("❌ Error en callback inmediato:", error);
       }
     }
   }
 
-  unsubscribeFromTimer(callback: (state: TimerState) => void) {
+  // Suscripciones
+  unsubscribeToTimerUpdate(callback: (state: TimerState) => void) {
     this.timerCallbacks = this.timerCallbacks.filter((cb) => cb !== callback);
     if (this.socket) {
-      this.socket.off("timer.state", callback);
+      this.socket.off("timer.update", callback);
     }
   }
 
@@ -973,7 +910,7 @@ class TimerService {
       const response = await fetch(`${BASE_URL}/timer/state/${this.timerKey}`);
       if (response.status === 404) {
         // Si el timer no existe, lo creamos con los valores por defecto
-        console.log(
+        console.info(
           "Timer no existe, creando uno nuevo con valores por defecto...",
         );
         if (this.socket) {
