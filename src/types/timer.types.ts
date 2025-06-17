@@ -10,16 +10,17 @@ export interface TimerState {
   type: TimerType;
   targetMinutes?: number;
   formattedTime?: string;
-  lastUpdated?: string;
 }
 
 export interface SavedTimerState {
-  stateId: string;
-  timerName: string;
-  type: TimerType;
+  timerKey: string;
+  timerName?: string;
   currentTime: number;
   status: TimerStatus;
-  name?: string;
+  type: string;
+  initialTime: number;
+  savedAt: Date;
+  startedAt?: Date;
   description?: string;
 }
 
@@ -54,7 +55,6 @@ export interface SaveStateDto {
 
 export interface LoadStateDto {
   timerKey: string;
-  stateId?: string;
 }
 
 export interface TimerCommandDto {
