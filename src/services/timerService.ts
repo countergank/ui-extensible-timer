@@ -260,13 +260,6 @@ class TimerService {
         throw new Error("Estado del timer inválido");
       }
 
-      console.debug("📊 [Timer State] Estado recibido:", {
-        currentTime: data.currentTime,
-        type: data.type,
-        status: data.status,
-        timerKey: data.timerKey,
-      });
-
       // Usar directamente el tiempo que viene del servidor
       this.timerState = {
         ...data, // Usar todo el estado que viene del servidor
@@ -383,30 +376,6 @@ class TimerService {
     });
 
     this.socket.on(
-      "timer.update",
-      (data: { currentTime: number } | TimerState) => {
-        console.debug("⏱️ [Socket] Evento timer.update recibido:", data);
-
-        // Si es solo un update de tiempo
-        if (
-          "currentTime" in data &&
-          typeof data.currentTime === "number" &&
-          this.lastTimerState
-        ) {
-          const updatedState: TimerState = {
-            ...this.lastTimerState,
-            currentTime: data.currentTime,
-          };
-          this.handleTimerStateUpdate(updatedState);
-        }
-        // Si es un estado completo
-        else if (this.validateTimerState(data as TimerState)) {
-          this.handleTimerStateUpdate(data as TimerState);
-        }
-      },
-    );
-
-    this.socket.on(
       "timer.state",
       (state: TimerState | { data: TimerState }) => {
         console.debug("📊 [Socket] Evento timer.state recibido:", state);
@@ -421,30 +390,6 @@ class TimerService {
         }
 
         this.handleTimerStateUpdate(parsedState);
-      },
-    );
-
-    // Escuchar eventos de tiempo específicos para este timer
-    const specificTimerEvent = `timer.${this.timerKey}.${this.timerName}.time`;
-    console.debug(
-      "🎯 [Socket] Suscrito a evento específico:",
-      specificTimerEvent,
-    );
-    this.socket.on(
-      specificTimerEvent,
-      (time: { currentTime: number; formattedTime: string }) => {
-        console.debug("⏱️ [Socket] Evento específico recibido:", time);
-        if (
-          time &&
-          typeof time.currentTime === "number" &&
-          this.lastTimerState
-        ) {
-          const updatedState: TimerState = {
-            ...this.lastTimerState,
-            currentTime: time.currentTime,
-          };
-          this.handleTimerStateUpdate(updatedState);
-        }
       },
     );
 
@@ -845,7 +790,7 @@ class TimerService {
     await operation();
   }
 
-  subscribeToTimerUpdate(callback: (state: TimerState) => void) {
+  subscribeToTimer(callback: (state: TimerState) => void) {
     console.info("📝 Suscribiendo a actualizaciones del timer");
     this.timerCallbacks.push(callback);
 
@@ -861,10 +806,10 @@ class TimerService {
   }
 
   // Suscripciones
-  unsubscribeToTimerUpdate(callback: (state: TimerState) => void) {
+  unsubscribeToTimer(callback: (state: TimerState) => void) {
     this.timerCallbacks = this.timerCallbacks.filter((cb) => cb !== callback);
     if (this.socket) {
-      this.socket.off("timer.update", callback);
+      this.socket.off("timer.state", callback);
     }
   }
 
