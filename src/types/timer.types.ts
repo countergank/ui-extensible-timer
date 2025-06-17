@@ -10,7 +10,7 @@ export interface TimerState {
   type: TimerType;
   targetMinutes?: number;
   formattedTime?: string;
-  lastUpdated: string;
+  lastUpdated?: string;
 }
 
 export interface SavedTimerState {
@@ -19,7 +19,6 @@ export interface SavedTimerState {
   type: TimerType;
   currentTime: number;
   status: TimerStatus;
-  lastUpdated: string;
   name?: string;
   description?: string;
 }

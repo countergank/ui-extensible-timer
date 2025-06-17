@@ -256,14 +256,6 @@ class TimerService {
 
   private handleTimerStateUpdate = (data: TimerState) => {
     try {
-      console.log("📊 [Timer State] Estado recibido:", {
-        currentTime: data.currentTime,
-        type: data.type,
-        status: data.status,
-        timerKey: data.timerKey,
-        lastUpdated: data.lastUpdated,
-      });
-
       // Validar el estado recibido
       if (!this.validateTimerState(data)) {
         throw new Error("Estado del timer inválido");
@@ -274,6 +266,15 @@ class TimerService {
         ? new Date(this.timerState.lastUpdated).getTime()
         : 0;
       const newLastUpdated = new Date(data.lastUpdated).getTime();
+
+      console.log("📊 [Timer State] Estado recibido:", {
+        currentTime: data.currentTime,
+        type: data.type,
+        status: data.status,
+        timerKey: data.timerKey,
+        lastUpdated: data.lastUpdated,
+        hasCondition: newLastUpdated >= currentLastUpdated,
+      });
 
       if (newLastUpdated >= currentLastUpdated) {
         // Mantener el tiempo actual cuando se pausa
@@ -486,22 +487,6 @@ class TimerService {
       console.log("📚 Estados guardados recibidos:", states);
       for (const savedStatesCallbacks of this.savedStatesCallbacks) {
         savedStatesCallbacks(states);
-      }
-    });
-
-    // Log genérico para cualquier otro evento
-    this.socket.onAny((event, ...args) => {
-      if (
-        ![
-          "timer.state",
-          "timer.state_saved",
-          "timer.saved_states",
-          "error",
-          "connect_error",
-        ].includes(event) &&
-        !(event.startsWith("timer.") && event.endsWith(".time"))
-      ) {
-        console.log("📡 [Socket] Evento recibido:", event, args);
       }
     });
 
@@ -912,7 +897,29 @@ class TimerService {
   }
 
   // Suscripciones
-  subscribeToTimer(callback: (state: TimerState) => void) {
+  subscribeToTimerUpdate(callback: (state: TimerState) => void) {
+    this.timerCallbacks.push(callback);
+
+    if (this.socket?.connected) {
+      this.socket.on("timer.update", callback);
+      // Notificar estado actual si existe
+      console.warn("subscribeToTimerUpdate", { state: this.timerState });
+      if (this.timerState) {
+        callback(this.timerState);
+      }
+    }
+  }
+
+  // Suscripciones
+  unsubscribeToTimerUpdate(callback: (state: TimerState) => void) {
+    this.timerCallbacks = this.timerCallbacks.filter((cb) => cb !== callback);
+    if (this.socket) {
+      this.socket.off("timer.update", callback);
+    }
+  }
+
+  // Suscripciones
+  subscribeToTimerState(callback: (state: TimerState) => void) {
     this.timerCallbacks.push(callback);
 
     if (this.socket?.connected) {
@@ -924,7 +931,7 @@ class TimerService {
     }
   }
 
-  unsubscribeFromTimer(callback: (state: TimerState) => void) {
+  unsubscribeFromTimerState(callback: (state: TimerState) => void) {
     this.timerCallbacks = this.timerCallbacks.filter((cb) => cb !== callback);
     if (this.socket) {
       this.socket.off("timer.state", callback);

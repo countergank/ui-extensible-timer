@@ -28,9 +28,6 @@ function App() {
   const [currentTimerName, setCurrentTimerName] =
     useState<string>("main-timer");
   const [error, setError] = useState<string | null>(null);
-  const [errorTimeout, setErrorTimeout] = useState<ReturnType<
-    typeof setTimeout
-  > | null>(null);
 
   // Crear una referencia al timerService para evitar recrearlo en cada render
   const timerServiceRef = useRef<TimerService | null>(null);
@@ -109,29 +106,13 @@ function App() {
   );
 
   // Función para manejar errores con timeout
-  const handleError = useCallback(
-    (message: string) => {
-      setError(message);
-      // Limpiar timeout anterior si existe
-      if (errorTimeout) {
-        clearTimeout(errorTimeout);
-      }
-      // Establecer nuevo timeout
-      const timeout = setTimeout(() => {
-        setError(null);
-      }, 5000); // 5 segundos
-      setErrorTimeout(timeout);
-    },
-    [errorTimeout],
-  );
+  const handleError = useCallback((message: string) => {
+    setError(message);
+  }, []);
 
   // Función para cerrar el error manualmente
   const handleCloseError = () => {
     setError(null);
-    if (errorTimeout) {
-      clearTimeout(errorTimeout);
-      setErrorTimeout(null);
-    }
   };
 
   const handleConnectionChange = useCallback(
@@ -221,13 +202,11 @@ function App() {
     setSocket(newSocket);
 
     // Suscribirse a eventos
-    service.subscribeToTimer(handleTimerUpdate);
+    service.subscribeToTimerUpdate(handleTimerUpdate);
+    service.subscribeToTimerState(handleTimerUpdate);
     service.subscribeToConnection(handleConnectionChange);
     service.subscribeToError((error: TimerError) => {
       handleError(error.message);
-    });
-    service.subscribeToSavedStates((states) => {
-      setSavedStates(states);
     });
 
     // Intentar reconexión si es necesario
@@ -243,15 +222,15 @@ function App() {
 
     return () => {
       clearInterval(reconnectInterval);
-      service.unsubscribeFromTimer(handleTimerUpdate);
+      service.unsubscribeToTimerUpdate(handleTimerUpdate);
+      service.unsubscribeFromTimerState(handleTimerUpdate);
       service.unsubscribeFromConnection(handleConnectionChange);
       service.unsubscribeFromError((error: TimerError) => {
         handleError(error.message);
       });
       service.disconnect();
     };
-  }, [handleTimerUpdate]);
-  // }, [handleTimerUpdate, handleConnectionChange, handleError]);
+  }, [handleTimerUpdate, handleConnectionChange, handleError]);
 
   // Efecto para manejar la reconexión cuando el socket se pierde
   useEffect(() => {
@@ -381,9 +360,14 @@ function App() {
 
   const handleGetSavedStates = () => {
     if (timerServiceRef.current) {
-      timerServiceRef.current.getSavedStatesSocket().catch(() => {
-        setError("Error al obtener estados guardados");
-      });
+      timerServiceRef.current
+        .getSavedStatesSocket()
+        .then((states) => {
+          setSavedStates(states);
+        })
+        .catch(() => {
+          setError("Error al obtener estados guardados");
+        });
       setShowSavedStates(true);
     }
   };
@@ -422,17 +406,22 @@ function App() {
       {error && (
         <div className="error-message">
           <span>{error}</span>
-          <button onClick={handleCloseError} className="close-error">
+          <button
+            type="button"
+            onClick={handleCloseError}
+            className="close-error"
+          >
             ×
           </button>
         </div>
       )}
 
       <div className="controls">
-        <button onClick={handleCreate} disabled={!isConnected}>
+        <button type="button" onClick={handleCreate} disabled={!isConnected}>
           Crear
         </button>
         <button
+          type="button"
           onClick={handleStart}
           disabled={!isConnected || (!isStopped && !isPaused)}
           title={
@@ -444,6 +433,7 @@ function App() {
           {isPaused ? "Reanudar" : "Iniciar"}
         </button>
         <button
+          type="button"
           onClick={handleReset}
           disabled={!isConnected}
           title="Restablecer el timer a su estado inicial"
@@ -451,22 +441,32 @@ function App() {
           Restablecer
         </button>
         <button
+          type="button"
           onClick={handlePause}
           disabled={!isConnected || !isActive || isPaused || isStopped}
           title={!isActive ? "El timer debe estar activo para pausar" : ""}
         >
           Pausar
         </button>
-        <button onClick={handleSaveState} disabled={!isConnected}>
+        <button type="button" onClick={handleSaveState} disabled={!isConnected}>
           Guardar Estado
         </button>
-        <button onClick={() => handleLoadState()} disabled={!isConnected}>
+        <button
+          type="button"
+          onClick={() => handleLoadState()}
+          disabled={!isConnected}
+        >
           Cargar Estado
         </button>
-        <button onClick={handleGetSavedStates} disabled={!isConnected}>
+        <button
+          type="button"
+          onClick={handleGetSavedStates}
+          disabled={!isConnected}
+        >
           Estados Guardados
         </button>
         <button
+          type="button"
           onClick={() => setUseSocket(!useSocket)}
           className={useSocket ? "socket-active" : "http-active"}
         >
@@ -475,13 +475,22 @@ function App() {
       </div>
 
       <div className="donation-controls">
-        <button onClick={() => handleAddTime("BITS")} disabled={!isConnected}>
+        <button
+          type="button"
+          onClick={() => handleAddTime("BITS")}
+          disabled={!isConnected}
+        >
           Añadir Bits
         </button>
-        <button onClick={() => handleAddTime("RAID")} disabled={!isConnected}>
+        <button
+          type="button"
+          onClick={() => handleAddTime("RAID")}
+          disabled={!isConnected}
+        >
           Añadir Raid
         </button>
         <button
+          type="button"
           onClick={() => handleAddTime("SUBSCRIPTION")}
           disabled={!isConnected}
         >
@@ -503,12 +512,16 @@ function App() {
       {showSavedStates && (
         <>
           <div
+            onKeyDown={() => {}}
+            onKeyUp={() => {}}
             className="modal-overlay"
             onClick={() => setShowSavedStates(false)}
           />
           <div className="saved-states">
             <h3>Estados Guardados</h3>
-            <button onClick={() => setShowSavedStates(false)}>Cerrar</button>
+            <button type="button" onClick={() => setShowSavedStates(false)}>
+              Cerrar
+            </button>
             {savedStates.length === 0 ? (
               <p
                 style={{
@@ -530,6 +543,8 @@ function App() {
                         setShowSavedStates(false);
                       }
                     }}
+                    onKeyDown={() => {}}
+                    onKeyUp={() => {}}
                   >
                     <div className="state-info">
                       <span className="state-name">
