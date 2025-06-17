@@ -1,54 +1,119 @@
-# React + TypeScript + Vite
+# Extensible Timer
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Un temporizador extensible y configurable construido con React, TypeScript y Vite.
 
-Currently, two official plugins are available:
+## Descripción
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Este proyecto es un temporizador que permite a los usuarios crear y personalizar temporizadores para diferentes propósitos. La interfaz de usuario está construida con React y TypeScript, y utiliza Vite como herramienta de construcción.
 
-## Expanding the ESLint configuration
+## Características
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+*   Creación de temporizadores personalizados
+*   Configuración de la duración del temporizador
+*   Notificaciones al finalizar el temporizador
+*   Interfaz de usuario intuitiva y fácil de usar
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+## Tecnologías utilizadas
+
+*   React
+*   TypeScript
+*   Vite
+*   ESLint
+
+## Requisitos
+
+*   Node.js (versión 18 o superior)
+*   npm (versión 8 o superior)
+
+## Instalación
+
+1.  Clona el repositorio:
+
+    ```bash
+    git clone https://github.com/tu-usuario/extensible-timer.git
+    ```
+2.  Navega al directorio del proyecto:
+
+    ```bash
+    cd extensible-timer
+    ```
+3.  Instala las dependencias:
+
+    ```bash
+    npm install
+    ```
+
+## Uso
+
+1.  Inicia el servidor de desarrollo:
+
+    ```bash
+    npm run dev
+    ```
+2.  Abre la aplicación en tu navegador en [http://localhost:5173](http://localhost:5173).
+
+## Configuración
+
+El archivo de configuración principal es `vite.config.ts`. Puedes modificar este archivo para cambiar la configuración de Vite, como el puerto del servidor de desarrollo o las opciones de compilación.
+
+## Estructura del proyecto
+
+```
+extensible-timer/
+├── .env                    # Variables de entorno
+├── .gitignore              # Archivos ignorados por Git
+├── biome.json              # Configuracion de Biome
+├── eslint.config.js        # Configuracion de ESLint
+├── index.html              # Archivo HTML principal
+├── LICENSE                 # Licencia del proyecto
+├── package-lock.json       # Archivo de bloqueo de dependencias
+├── package.json            # Archivo de manifiesto del proyecto
+├── README.md               # Este archivo
+├── tsconfig.app.json       # Configuracion de TypeScript para la aplicacion
+├── tsconfig.json           # Configuracion de TypeScript
+├── tsconfig.node.json      # Configuracion de TypeScript para Node.js
+├── vite.config.ts          # Configuracion de Vite
+├── public/                 # Archivos publicos
+│   └── vite.svg            # Icono de Vite
+├── src/                    # Codigo fuente de la aplicacion
+│   ├── App.css             # Estilos de la aplicacion
+│   ├── App.tsx             # Componente principal de la aplicacion
+│   ├── index.css           # Estilos globales
+│   ├── main.tsx            # Punto de entrada de la aplicacion
+│   ├── vite-env.d.ts       # Declaraciones de tipo para Vite
+│   ├── assets/             # Recursos
+│   │   └── react.svg       # Icono de React
+│   ├── components/         # Componentes de React
+│   │   ├── CreateTimerModal.tsx # Modal para crear temporizadores
+│   │   └── FloatingTimer.tsx  # Temporizador flotante
+│   ├── services/           # Servicios
+│   │   └── timerService.ts  # Servicio para la gestion de temporizadores
+│   └── types/              # Tipos
+│       └── timer.types.ts   # Tipos para los temporizadores
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Contribución
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Si deseas contribuir a este proyecto, por favor sigue estos pasos:
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
+1.  Haz un fork del repositorio.
+2.  Crea una rama con tu característica o corrección:
+
+    ```bash
+    git checkout -b mi-caracteristica
+    ```
+3.  Realiza tus cambios y commitea:
+
+    ```bash
+    git commit -m "Agrega mi característica"
+    ```
+4.  Sube los cambios a tu repositorio:
+
+    ```bash
+    git push origin mi-caracteristica
+    ```
+5.  Crea un pull request.
+
+## Licencia
+
+Este proyecto está licenciado bajo la [Licencia MIT](LICENSE).
