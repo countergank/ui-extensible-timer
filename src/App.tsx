@@ -24,9 +24,9 @@ function App() {
   const [savedStates, setSavedStates] = useState<SavedTimerState[]>([]);
   const [showSavedStates, setShowSavedStates] = useState<boolean>(false);
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
-  const [currentTimerKey, setCurrentTimerKey] = useState<string>("twitch");
+  const [currentTimerKey, setCurrentTimerKey] = useState<string>("main-timer");
   const [currentTimerName, setCurrentTimerName] =
-    useState<string>("main-timer");
+    useState<string>("Main Timer");
   const [error, setError] = useState<string | null>(null);
 
   // Crear una referencia al timerService para evitar recrearlo en cada render
@@ -497,8 +497,8 @@ function App() {
       {showSavedStates && (
         <>
           <div
-            onKeyDown={() => {}}
-            onKeyUp={() => {}}
+            onKeyDown={() => { }}
+            onKeyUp={() => { }}
             className="modal-overlay"
             onClick={() => setShowSavedStates(false)}
           />
@@ -528,8 +528,8 @@ function App() {
                         setShowSavedStates(false);
                       }
                     }}
-                    onKeyDown={() => {}}
-                    onKeyUp={() => {}}
+                    onKeyDown={() => { }}
+                    onKeyUp={() => { }}
                   >
                     <div className="state-info">
                       <span className="state-name">
