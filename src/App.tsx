@@ -188,7 +188,7 @@ function App() {
     setSocket(newSocket);
 
     // Suscribirse a eventos UNA SOLA VEZ
-    service.subscribeToTimerUpdate(handleTimerUpdate);
+    service.subscribeToTimer(handleTimerUpdate);
     service.subscribeToConnection(handleConnectionChange);
     service.subscribeToError((error: TimerError) => {
       handleError(error.message);
@@ -210,7 +210,7 @@ function App() {
       clearInterval(reconnectInterval);
 
       // Desuscribirse de todos los eventos
-      service.unsubscribeToTimerUpdate(handleTimerUpdate);
+      service.unsubscribeToTimer(handleTimerUpdate);
       service.unsubscribeFromConnection(handleConnectionChange);
       service.unsubscribeFromError((error: TimerError) => {
         handleError(error.message);
@@ -497,8 +497,8 @@ function App() {
       {showSavedStates && (
         <>
           <div
-            onKeyDown={() => { }}
-            onKeyUp={() => { }}
+            onKeyDown={() => {}}
+            onKeyUp={() => {}}
             className="modal-overlay"
             onClick={() => setShowSavedStates(false)}
           />
@@ -528,8 +528,8 @@ function App() {
                         setShowSavedStates(false);
                       }
                     }}
-                    onKeyDown={() => { }}
-                    onKeyUp={() => { }}
+                    onKeyDown={() => {}}
+                    onKeyUp={() => {}}
                   >
                     <div className="state-info">
                       <span className="state-name">
