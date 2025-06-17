@@ -1,18 +1,31 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { IconType } from "react-icons";
+import {
+  FaPause,
+  FaPlay,
+  FaPlus,
+  FaRandom,
+  FaRedo,
+  FaSave,
+} from "react-icons/fa";
 import type { Socket } from "socket.io-client";
 import "./App.css";
 import { CreateTimerModal } from "./components/CreateTimerModal";
 import { FloatingTimer } from "./components/FloatingTimer";
+import IconButton from "./components/IconButton";
+import ThemeSelector from "./components/ThemeSelector";
+import { ThemeProvider, useTheme } from "./context/ThemeContext";
 import TimerService from "./services/timerService";
 import type {
   DonationType,
-  SavedTimerState,
   TimerError,
   TimerState,
   TimerType,
 } from "./types/timer.types";
 
-function App() {
+function AppContent() {
+  const { theme } = useTheme();
+
   const [socket, setSocket] = useState<Socket | null>(null);
   const [timer, setTimer] = useState<number>(0);
   const [isActive, setIsActive] = useState<boolean>(false);
@@ -21,8 +34,6 @@ function App() {
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [timerType, setTimerType] = useState<TimerType>("COUNTDOWN");
   const [useSocket, setUseSocket] = useState<boolean>(true);
-  const [savedStates, setSavedStates] = useState<SavedTimerState[]>([]);
-  const [showSavedStates, setShowSavedStates] = useState<boolean>(false);
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
   const [currentTimerKey, setCurrentTimerKey] = useState<string>("main-timer");
   const [currentTimerName, setCurrentTimerName] =
@@ -325,35 +336,16 @@ function App() {
       return;
     }
 
-    const description = prompt("Descripción (opcional):");
+    const descriptionValue: string | undefined = prompt(
+      "Descripción (opcional):",
+    )?.trim();
+
     if (timerServiceRef.current) {
       timerServiceRef.current
-        .saveStateSocket(name.trim(), description?.trim() || undefined)
+        .saveStateSocket(name.trim(), descriptionValue)
         .catch(() => {
           setError("Error al guardar el estado");
         });
-    }
-  };
-
-  const handleLoadState = () => {
-    if (timerServiceRef.current) {
-      timerServiceRef.current.loadStateSocket().catch(() => {
-        setError("Error al cargar el estado");
-      });
-    }
-  };
-
-  const handleGetSavedStates = () => {
-    if (timerServiceRef.current) {
-      timerServiceRef.current
-        .getSavedStatesSocket()
-        .then((states) => {
-          setSavedStates(states);
-        })
-        .catch(() => {
-          setError("Error al obtener estados guardados");
-        });
-      setShowSavedStates(true);
     }
   };
 
@@ -386,8 +378,82 @@ function App() {
     }
   };
 
+  interface ButtonDefinition {
+    icon: IconType;
+    tooltip: string;
+    onClick: (type?: DonationType) => void;
+    disabled: (
+      isConnected: boolean,
+      isActive: boolean,
+      isPaused: boolean,
+      isStopped: boolean,
+    ) => boolean;
+  }
+
+  const buttonDefinitions: ButtonDefinition[] = [
+    {
+      icon: FaPlus,
+      tooltip: "Crear",
+      onClick: handleCreate,
+      disabled: (isConnected) => !isConnected,
+    },
+    {
+      icon: FaPlay,
+      tooltip: isPaused ? "Reanudar" : "Iniciar",
+      onClick: handleStart,
+      disabled: (isConnected, isActive, isPaused, isStopped) =>
+        !isConnected || (!isStopped && !isPaused),
+    },
+    {
+      icon: FaRedo,
+      tooltip: "Restablecer",
+      onClick: handleReset,
+      disabled: (isConnected) => !isConnected,
+    },
+    {
+      icon: FaPause,
+      tooltip: "Pausar",
+      onClick: handlePause,
+      disabled: (isConnected, isActive, isPaused, isStopped) =>
+        !isConnected || !isActive || isPaused || isStopped,
+    },
+    {
+      icon: FaSave,
+      tooltip: "Guardar Estado",
+      onClick: handleSaveState,
+      disabled: (isConnected) => !isConnected,
+    },
+    {
+      icon: FaRandom,
+      tooltip: useSocket ? "Usando Socket" : "Usando HTTP",
+      onClick: () => setUseSocket(!useSocket),
+      disabled: (isConnected) => !isConnected,
+    },
+  ];
+
+  const donationButtons = [
+    {
+      icon: FaPlus,
+      tooltip: "Añadir Bits",
+      onClick: () => handleAddTime("BITS"),
+      disabled: (isConnected) => !isConnected,
+    },
+    {
+      icon: FaPlus,
+      tooltip: "Añadir Raid",
+      onClick: () => handleAddTime("RAID"),
+      disabled: (isConnected) => !isConnected,
+    },
+    {
+      icon: FaPlus,
+      tooltip: "Añadir Sub",
+      onClick: () => handleAddTime("SUBSCRIPTION"),
+      disabled: (isConnected) => !isConnected,
+    },
+  ];
+
   return (
-    <div className="overlay">
+    <div className={`overlay ${theme}`}>
       {error && (
         <div className="error-message">
           <span>{error}</span>
@@ -402,85 +468,33 @@ function App() {
       )}
 
       <div className="controls">
-        <button type="button" onClick={handleCreate} disabled={!isConnected}>
-          Crear
-        </button>
-        <button
-          type="button"
-          onClick={handleStart}
-          disabled={!isConnected || (!isStopped && !isPaused)}
-          title={
-            !isStopped && !isPaused
-              ? "El timer debe estar detenido o pausado para iniciar o reanudar"
-              : ""
-          }
-        >
-          {isPaused ? "Reanudar" : "Iniciar"}
-        </button>
-        <button
-          type="button"
-          onClick={handleReset}
-          disabled={!isConnected}
-          title="Restablecer el timer a su estado inicial"
-        >
-          Restablecer
-        </button>
-        <button
-          type="button"
-          onClick={handlePause}
-          disabled={!isConnected || !isActive || isPaused || isStopped}
-          title={!isActive ? "El timer debe estar activo para pausar" : ""}
-        >
-          Pausar
-        </button>
-        <button type="button" onClick={handleSaveState} disabled={!isConnected}>
-          Guardar Estado
-        </button>
-        <button
-          type="button"
-          onClick={() => handleLoadState()}
-          disabled={!isConnected}
-        >
-          Cargar Estado
-        </button>
-        <button
-          type="button"
-          onClick={handleGetSavedStates}
-          disabled={!isConnected}
-        >
-          Estados Guardados
-        </button>
-        <button
-          type="button"
-          onClick={() => setUseSocket(!useSocket)}
-          className={useSocket ? "socket-active" : "http-active"}
-        >
-          {useSocket ? "Usando Socket" : "Usando HTTP"}
-        </button>
+        <ThemeSelector />
+        {buttonDefinitions.map((button) => (
+          <IconButton
+            key={button.tooltip}
+            icon={<button.icon />}
+            tooltip={button.tooltip}
+            onClick={button.onClick}
+            disabled={button.disabled(
+              isConnected,
+              isActive,
+              isPaused,
+              isStopped,
+            )}
+          />
+        ))}
       </div>
 
       <div className="donation-controls">
-        <button
-          type="button"
-          onClick={() => handleAddTime("BITS")}
-          disabled={!isConnected}
-        >
-          Añadir Bits
-        </button>
-        <button
-          type="button"
-          onClick={() => handleAddTime("RAID")}
-          disabled={!isConnected}
-        >
-          Añadir Raid
-        </button>
-        <button
-          type="button"
-          onClick={() => handleAddTime("SUBSCRIPTION")}
-          disabled={!isConnected}
-        >
-          Añadir Sub
-        </button>
+        {donationButtons.map((button) => (
+          <IconButton
+            key={button.tooltip}
+            icon={<button.icon />}
+            tooltip={button.tooltip}
+            onClick={button.onClick}
+            disabled={button.disabled(isConnected)}
+          />
+        ))}
       </div>
 
       <FloatingTimer
@@ -494,65 +508,6 @@ function App() {
         formatTime={formatTime}
       />
 
-      {showSavedStates && (
-        <>
-          <div
-            onKeyDown={() => {}}
-            onKeyUp={() => {}}
-            className="modal-overlay"
-            onClick={() => setShowSavedStates(false)}
-          />
-          <div className="saved-states">
-            <h3>Estados Guardados</h3>
-            <button type="button" onClick={() => setShowSavedStates(false)}>
-              Cerrar
-            </button>
-            {savedStates.length === 0 ? (
-              <p
-                style={{
-                  color: "#00ff00",
-                  textAlign: "center",
-                  padding: "20px",
-                }}
-              >
-                No hay estados guardados
-              </p>
-            ) : (
-              <ul>
-                {savedStates.map((state) => (
-                  <li
-                    key={state.timerKey}
-                    onClick={() => {
-                      if (timerServiceRef.current) {
-                        handleLoadState();
-                        setShowSavedStates(false);
-                      }
-                    }}
-                    onKeyDown={() => {}}
-                    onKeyUp={() => {}}
-                  >
-                    <div className="state-info">
-                      <span className="state-name">
-                        {state.timerName || state.timerName}
-                      </span>
-                      <span className="state-type">{state.type}</span>
-                      <span className="state-time">
-                        {formatTime(state.currentTime)}
-                      </span>
-                      {state?.description && (
-                        <span className="state-description">
-                          {state.description}
-                        </span>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </>
-      )}
-
       {showCreateModal && (
         <CreateTimerModal
           isOpen={showCreateModal}
@@ -561,6 +516,14 @@ function App() {
         />
       )}
     </div>
+  );
+}
+
+function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
   );
 }
 

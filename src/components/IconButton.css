@@ -1,0 +1,14 @@
+.icon-button {
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1.5em;
+  color: inherit;
+  padding: 0.5em;
+  border-radius: 5px;
+}
+
+.icon-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

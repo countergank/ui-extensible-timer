@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { TimerType } from "../types/timer.types";
+import Tooltip from "./Tooltip";
 
 interface FloatingTimerProps {
   timer: number;
@@ -52,7 +53,7 @@ export function FloatingTimer({
     const status = getTimerStatus();
     const type =
       timerType === "COUNTDOWN" ? "Cuenta Regresiva" : "Cuenta Ascendente";
-    return `${timerName}\nTipo: ${type}\nEstado: ${status}\nTiempo: ${formatTime(timer)}`;
+    return `${timerName}\nTipo: ${type}\nEstado: ${status}`;
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -94,27 +95,20 @@ export function FloatingTimer({
   }, [isDragging, handleMouseUp, handleMouseMove]);
 
   return (
-    <div
-      ref={timerRef}
-      className={`floating-timer ${isDragging ? "dragging" : ""}`}
-      style={{
-        position: "fixed",
-        left: `${position.x}px`,
-        top: `${position.y}px`,
-        cursor: isDragging ? "grabbing" : "grab",
-      }}
-      onMouseDown={handleMouseDown}
-      title={getTimerTooltip()}
-    >
-      <div className="timer-labels">
-        <span className="timer-name">{timerName}</span>
-        <span className="timer-status">{getTimerStatus()}</span>
-      </div>
+    <Tooltip text={getTimerTooltip()}>
       <div
-        className={`timer ${isActive ? "active" : "inactive"} ${!isConnected ? "disconnected" : ""}`}
+        ref={timerRef}
+        className={`floating-timer ${isDragging ? "dragging" : ""}`}
+        style={{
+          position: "fixed",
+          left: `${position.x}px`,
+          top: `${position.y}px`,
+          cursor: isDragging ? "grabbing" : "grab",
+        }}
+        onMouseDown={handleMouseDown}
       >
         {formatTime(timer)}
       </div>
-    </div>
+    </Tooltip>
   );
 }
