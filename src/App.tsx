@@ -32,78 +32,85 @@ function App() {
   // Crear una referencia al timerService para evitar recrearlo en cada render
   const timerServiceRef = useRef<TimerService | null>(null);
 
-  const handleTimerUpdate = useCallback(
-    (data: TimerState) => {
-      console.log("[TIMER EVENT] Recibido:", data);
-      try {
-        // Validar que data sea un objeto válido
-        if (!data || typeof data !== "object") {
-          throw new Error(
-            "Datos del temporizador inválidos: objeto nulo o inválido",
-          );
-        }
-
-        // Validar que currentTime sea un número válido
-        if (
-          typeof data.currentTime !== "number" ||
-          Number.isNaN(data.currentTime)
-        ) {
-          throw new Error(
-            "Datos del temporizador inválidos: tiempo actual no es un número válido",
-          );
-        }
-
-        // Validar que el tipo de timer sea válido
-        if (!["COUNTDOWN", "COUNTUP"].includes(data.type)) {
-          throw new Error(
-            "Datos del temporizador inválidos: tipo de timer no válido",
-          );
-        }
-
-        // Validar que el estado sea válido
-        if (!["RUNNING", "PAUSED", "STOPPED"].includes(data.status)) {
-          throw new Error("Datos del temporizador inválidos: estado no válido");
-        }
-
-        // Determinar el estado del timer basado en el status del servidor
-        const status = data.status.toUpperCase();
-        const isActive = status === "RUNNING";
-        const isPaused = status === "PAUSED";
-        const isStopped = status === "STOPPED";
-
-        // Mantener el tiempo actual cuando se pausa
-        const shouldKeepCurrentTime = data.status === "PAUSED" && isActive;
-        const currentTime = shouldKeepCurrentTime
-          ? timer // Mantener el tiempo actual
-          : data.type === "COUNTDOWN"
-            ? Math.max(0, data.currentTime) // Para countdown, no permitir valores negativos
-            : data.currentTime; // Para countup, permitir cualquier valor
-
-        // Actualizar el estado del timer
-        setTimer(currentTime);
-        setIsActive(isActive);
-        setIsPaused(isPaused);
-        setIsStopped(isStopped);
-        setTimerType(data.type);
-        setError(null); // Limpiar cualquier error previo
-
-        // Si es countdown y llegó a 0, detener el timer
-        if (data.type === "COUNTDOWN" && currentTime === 0 && isActive) {
-          if (timerServiceRef.current) {
-            timerServiceRef.current.pauseTimerSocket();
-          }
-        }
-      } catch (error) {
-        console.error("[TIMER ERROR]", error);
-        setError(
-          error instanceof Error
-            ? error.message
-            : "Error al actualizar el temporizador",
+  // 1. Corregir handleTimerUpdate para no interferir con las actualizaciones
+  const handleTimerUpdate = useCallback((data: TimerState) => {
+    console.log("[TIMER EVENT] Recibido:", data);
+    try {
+      // Validar que data sea un objeto válido
+      if (!data || typeof data !== "object") {
+        throw new Error(
+          "Datos del temporizador inválidos: objeto nulo o inválido",
         );
       }
-    },
-    [timer],
-  );
+
+      // Validar que currentTime sea un número válido
+      if (
+        typeof data.currentTime !== "number" ||
+        Number.isNaN(data.currentTime)
+      ) {
+        throw new Error(
+          "Datos del temporizador inválidos: tiempo actual no es un número válido",
+        );
+      }
+
+      // Validar que el tipo de timer sea válido
+      if (!["COUNTDOWN", "COUNTUP"].includes(data.type)) {
+        throw new Error(
+          "Datos del temporizador inválidos: tipo de timer no válido",
+        );
+      }
+
+      // Validar que el estado sea válido
+      if (!["RUNNING", "PAUSED", "STOPPED"].includes(data.status)) {
+        throw new Error("Datos del temporizador inválidos: estado no válido");
+      }
+
+      // Determinar el estado del timer basado en el status del servidor
+      const status = data.status.toUpperCase();
+      const isActive = status === "RUNNING";
+      const isPaused = status === "PAUSED";
+      const isStopped = status === "STOPPED";
+
+      // CORREGIR: Usar directamente el tiempo que viene del servidor
+      // NO mantener el tiempo anterior cuando se pausa
+      const currentTime =
+        data.type === "COUNTDOWN"
+          ? Math.max(0, data.currentTime) // Para countdown, no permitir valores negativos
+          : data.currentTime; // Para countup, permitir cualquier valor
+
+      console.log("[TIMER UPDATE] Actualizando estado:", {
+        currentTime,
+        type: data.type,
+        status: data.status,
+        isActive,
+        isPaused,
+        isStopped,
+      });
+
+      // Actualizar el estado del timer
+      setTimer(currentTime);
+      setIsActive(isActive);
+      setIsPaused(isPaused);
+      setIsStopped(isStopped);
+      setTimerType(data.type);
+      setError(null); // Limpiar cualquier error previo
+
+      // Si es countdown y llegó a 0, detener el timer
+      if (data.type === "COUNTDOWN" && currentTime === 0 && isActive) {
+        console.log("[TIMER] Countdown llegó a 0, pausando timer");
+        if (timerServiceRef.current) {
+          timerServiceRef.current.pauseTimerSocket();
+        }
+      }
+    } catch (error) {
+      console.error("[TIMER ERROR]", error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Error al actualizar el temporizador",
+      );
+    }
+  }, []);
 
   // Función para manejar errores con timeout
   const handleError = useCallback((message: string) => {
@@ -168,19 +175,31 @@ function App() {
 
   // Efecto para inicializar el timerService
   useEffect(() => {
-    timerServiceRef.current = new TimerService(
-      currentTimerKey,
-      currentTimerName,
-    );
+    console.log("[INIT] Inicializando TimerService...");
+
+    // Solo crear el servicio si no existe
+    if (!timerServiceRef.current) {
+      timerServiceRef.current = new TimerService(
+        currentTimerKey,
+        currentTimerName,
+      );
+    } else {
+      // Si ya existe, solo actualizar la información
+      timerServiceRef.current.setTimerInfo(currentTimerKey, currentTimerName);
+    }
 
     // Obtener el estado inicial del timer
     const initializeTimer = async () => {
       try {
         const state = await timerServiceRef.current?.getTimerStateHttp();
         if (state) {
+          console.log("[INIT] Estado inicial obtenido:", state);
           handleTimerUpdate(state);
+        } else {
+          console.log("[INIT] No se encontró estado inicial");
         }
-      } catch {
+      } catch (error) {
+        console.error("[INIT] Error al obtener estado inicial:", error);
         setError("Error al obtener el estado inicial del timer");
       }
     };
@@ -188,20 +207,28 @@ function App() {
     initializeTimer();
 
     return () => {
-      timerServiceRef.current?.disconnect();
-      timerServiceRef.current = null;
+      console.log("[CLEANUP] Limpiando TimerService...");
+      if (timerServiceRef.current) {
+        timerServiceRef.current.disconnect();
+        timerServiceRef.current = null;
+      }
     };
-  }, [currentTimerKey, currentTimerName, handleTimerUpdate]);
+  }, [currentTimerKey, currentTimerName]);
 
-  // Efecto para manejar la conexión y suscripciones
   useEffect(() => {
-    if (!timerServiceRef.current) return;
+    if (!timerServiceRef.current) {
+      console.log("[CONNECTION] TimerService no disponible");
+      return;
+    }
 
+    console.log("[CONNECTION] Configurando conexión y suscripciones...");
     const service = timerServiceRef.current;
+
+    // Conectar
     const newSocket = service.connect();
     setSocket(newSocket);
 
-    // Suscribirse a eventos
+    // Suscribirse a eventos UNA SOLA VEZ
     service.subscribeToTimerUpdate(handleTimerUpdate);
     service.subscribeToTimerState(handleTimerUpdate);
     service.subscribeToConnection(handleConnectionChange);
@@ -221,26 +248,27 @@ function App() {
     const reconnectInterval = setInterval(attemptReconnect, 5000);
 
     return () => {
+      console.log("[CONNECTION CLEANUP] Limpiando suscripciones...");
       clearInterval(reconnectInterval);
+
+      // Desuscribirse de todos los eventos
       service.unsubscribeToTimerUpdate(handleTimerUpdate);
       service.unsubscribeFromTimerState(handleTimerUpdate);
       service.unsubscribeFromConnection(handleConnectionChange);
       service.unsubscribeFromError((error: TimerError) => {
         handleError(error.message);
       });
-      service.disconnect();
     };
-  }, [handleTimerUpdate, handleConnectionChange, handleError]);
+  }, []);
 
   // Efecto para manejar la reconexión cuando el socket se pierde
   useEffect(() => {
     if (!socket) return;
 
     const handleDisconnect = () => {
-      console.log("❌ Socket desconectado, intentando reconectar...");
-      if (timerServiceRef.current) {
-        timerServiceRef.current.ensureConnection();
-      }
+      console.log("❌ Socket desconectado, programando reconexión...");
+      // No llamar ensureConnection aquí para evitar múltiples intentos
+      // El intervalo de reconexión se encargará de esto
     };
 
     socket.on("disconnect", handleDisconnect);
