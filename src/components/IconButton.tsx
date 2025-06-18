@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import type React from "react";
 import Tooltip from "./Tooltip";
 
@@ -16,9 +17,9 @@ const IconButton: React.FC<IconButtonProps> = ({
 }) => {
   return (
     <Tooltip text={tooltip}>
-      <button type="button" onClick={onClick} disabled={disabled}>
+      <Button type="button" onClick={onClick} disabled={disabled}>
         {icon}
-      </button>
+      </Button>
     </Tooltip>
   );
 };

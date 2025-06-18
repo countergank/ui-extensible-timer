@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { IconType } from "react-icons";
 import {
@@ -455,9 +456,7 @@ function AppContent() {
       {error && (
         <div>
           <span>{error}</span>
-          <button type="button" onClick={handleCloseError}>
-            ×
-          </button>
+          <Button onClick={handleCloseError}>×</Button>
         </div>
       )}
 

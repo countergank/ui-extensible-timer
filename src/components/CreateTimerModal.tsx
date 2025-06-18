@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import type { TimerType } from "../types/timer.types";
 
@@ -85,10 +86,10 @@ export function CreateTimerModal({
             />
           </div>
           <div>
-            <button type="submit">Crear</button>
-            <button type="button" onClick={onClose}>
+            <Button type="submit">Crear</Button>
+            <Button type="button" onClick={onClose}>
               Cancelar
-            </button>
+            </Button>
           </div>
         </form>
       </div>
