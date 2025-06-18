@@ -5,7 +5,18 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Pause, Play, Plus, Redo, Save, Shuffle } from "lucide-react";
+import { formatTime } from "@/lib/formatTime";
+import {
+  Gift,
+  Hash,
+  Pause,
+  Play,
+  Plus,
+  Redo,
+  Save,
+  Server,
+  Shuffle,
+} from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { IconType } from "react-icons";
 import type { Socket } from "socket.io-client";
@@ -29,7 +40,6 @@ function AppContent() {
   const [isPaused, setIsPaused] = useState<boolean>(false);
   const [isStopped, setIsStopped] = useState<boolean>(true);
   const [isConnected, setIsConnected] = useState<boolean>(false);
-  const [timerType, setTimerType] = useState<TimerType>("COUNTDOWN");
   const [useSocket, setUseSocket] = useState<boolean>(true);
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
   const [currentTimerKey, setCurrentTimerKey] = useState<string>("main-timer");
@@ -61,7 +71,6 @@ function AppContent() {
       setIsActive(isActive);
       setIsPaused(isPaused);
       setIsStopped(isStopped);
-      setTimerType(data.type);
       setError(null); // Limpiar cualquier error previo
 
       // Si es countdown y llegó a 0, detener el timer
@@ -124,7 +133,6 @@ function AppContent() {
                 defaultType,
               ) || "",
             );
-            setTimerType(defaultType);
             setTimer(defaultTime);
 
             return timerServiceRef.current?.createTimerSocket(
@@ -243,23 +251,6 @@ function AppContent() {
     };
   }, [socket]);
 
-  const formatTime = (seconds: number | string | undefined): string => {
-    const parsedSeconds =
-      typeof seconds === "string" ? Number.parseInt(seconds, 10) : seconds;
-
-    if (
-      parsedSeconds === undefined ||
-      Number.isNaN(parsedSeconds) ||
-      parsedSeconds < 0
-    ) {
-      return "0:00";
-    }
-
-    const minutes = Math.floor(parsedSeconds / 60);
-    const remainingSeconds = Math.floor(parsedSeconds % 60);
-    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
-  };
-
   const handleCreate = () => {
     setShowCreateModal(true);
   };
@@ -272,7 +263,6 @@ function AppContent() {
   ) => {
     setCurrentTimerKey(timerKey);
     setCurrentTimerName(timerName);
-    setTimerType(type);
 
     if (timerServiceRef.current) {
       timerServiceRef.current.setTimerInfo(timerKey, timerName);
@@ -430,19 +420,19 @@ function AppContent() {
 
   const donationButtons = [
     {
-      icon: Plus,
+      icon: Hash,
       tooltip: "Añadir Bits",
       onClick: () => handleAddTime("BITS"),
       disabled: (isConnected) => !isConnected,
     },
     {
-      icon: Plus,
+      icon: Server,
       tooltip: "Añadir Raid",
       onClick: () => handleAddTime("RAID"),
       disabled: (isConnected) => !isConnected,
     },
     {
-      icon: Plus,
+      icon: Gift,
       tooltip: "Añadir Sub",
       onClick: () => handleAddTime("SUBSCRIPTION"),
       disabled: (isConnected) => !isConnected,
@@ -464,7 +454,7 @@ function AppContent() {
         <ThemeSelector />
         {buttonDefinitions.map((button) => (
           <TooltipProvider key={button.tooltip}>
-            <Tooltip delayDuration={50}>
+            <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
@@ -481,9 +471,7 @@ function AppContent() {
                   <span className="sr-only">{button.tooltip}</span>
                 </Button>
               </TooltipTrigger>
-              <TooltipContent className="bg-popover text-popover-foreground">
-                {button.tooltip}
-              </TooltipContent>
+              <TooltipContent>{button.tooltip}</TooltipContent>
             </Tooltip>
           </TooltipProvider>
         ))}
@@ -510,16 +498,7 @@ function AppContent() {
         ))}
       </div>
 
-      <FloatingTimer
-        timer={timer}
-        timerName={currentTimerName}
-        timerType={timerType}
-        isActive={isActive}
-        isPaused={isPaused}
-        isStopped={isStopped}
-        isConnected={isConnected}
-        formatTime={formatTime}
-      />
+      <FloatingTimer timer={timer} formatTime={formatTime} />
 
       {showCreateModal && (
         <CreateTimerModal
