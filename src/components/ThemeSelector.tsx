@@ -5,11 +5,29 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useEffect, useState } from "react";
 import { FaMoon, FaSun } from "react-icons/fa";
 import { useTheme } from "../context/ThemeContext";
 
 const ThemeSelector = () => {
   const { theme, setTheme } = useTheme();
+  const [themeLoaded, setThemeLoaded] = useState(false); // 👈 nuevo estado
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme) {
+      setTheme(savedTheme);
+    }
+    setThemeLoaded(true); // ✅ marcar como listo
+  }, [setTheme]);
+
+  useEffect(() => {
+    if (themeLoaded) {
+      localStorage.setItem("theme", theme);
+    }
+  }, [theme, themeLoaded]);
+
+  if (!themeLoaded) return null; // Esperar carga antes de renderizar
 
   return (
     <DropdownMenu>

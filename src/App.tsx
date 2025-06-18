@@ -1,29 +1,25 @@
-import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { ButtonPanel, type PanelButton } from "@/components/ButtonPanel";
+import ThemeSelector from "@/components/ThemeSelector";
+import { Alert, AlertTitle } from "@/components/ui/alert";
 import { formatTime } from "@/lib/formatTime";
 import {
+  ClockPlus,
   Gift,
   Hash,
   Pause,
   Play,
-  Plus,
-  Redo,
   Save,
   Server,
   Shuffle,
+  Timer,
+  TimerReset,
+  Trash2,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { IconType } from "react-icons";
 import type { Socket } from "socket.io-client";
 import "./App.css";
 import { CreateTimerModal } from "./components/CreateTimerModal";
 import { FloatingTimer } from "./components/FloatingTimer";
-import ThemeSelector from "./components/ThemeSelector";
 import { ThemeProvider } from "./context/ThemeContext";
 import TimerService from "./services/timerService";
 import type {
@@ -35,6 +31,7 @@ import type {
 
 function AppContent() {
   const [socket, setSocket] = useState<Socket | null>(null);
+
   const [timer, setTimer] = useState<number>(0);
   const [isActive, setIsActive] = useState<boolean>(false);
   const [isPaused, setIsPaused] = useState<boolean>(false);
@@ -45,6 +42,9 @@ function AppContent() {
   const [currentTimerKey, setCurrentTimerKey] = useState<string>("main-timer");
   const [currentTimerName, setCurrentTimerName] =
     useState<string>("Main Timer");
+  const [currentTimerType, setCurrentTimerType] =
+    useState<TimerType>("COUNTDOWN");
+  const [formattedTime, setFormattedTime] = useState<string>("00:00:00");
   const [error, setError] = useState<string | null>(null);
 
   // Crear una referencia al timerService para evitar recrearlo en cada render
@@ -58,6 +58,8 @@ function AppContent() {
       const isActive = status === "RUNNING";
       const isPaused = status === "PAUSED";
       const isStopped = status === "STOPPED";
+      const currentType = data.type;
+      const currentFormattedType = data.formattedTime;
 
       // CORREGIR: Usar directamente el tiempo que viene del servidor
       // NO mantener el tiempo anterior cuando se pausa
@@ -71,6 +73,8 @@ function AppContent() {
       setIsActive(isActive);
       setIsPaused(isPaused);
       setIsStopped(isStopped);
+      setCurrentTimerType(currentType);
+      setFormattedTime(currentFormattedType);
       setError(null); // Limpiar cualquier error previo
 
       // Si es countdown y llegó a 0, detener el timer
@@ -126,6 +130,7 @@ function AppContent() {
             const defaultKey =
               import.meta.env.VITE_DEFAULT_TIMER_KEY || "main-timer";
 
+            setCurrentTimerType(defaultType);
             setCurrentTimerKey(defaultKey);
             setCurrentTimerName(
               timerServiceRef.current?.generateFriendlyName(
@@ -365,140 +370,115 @@ function AppContent() {
     }
   };
 
-  interface ButtonDefinition {
-    icon: IconType;
-    tooltip: string;
-    onClick: (type?: DonationType) => void;
-    disabled: (
-      isConnected: boolean,
-      isActive: boolean,
-      isPaused: boolean,
-      isStopped: boolean,
-    ) => boolean;
-  }
+  const getTimerStatus = () => {
+    if (!isConnected) return "Desconectado";
+    if (isStopped) return "Detenido";
+    if (isPaused) return "Pausado";
+    if (isActive) return "En ejecución";
+    return "Desconocido";
+  };
 
-  const buttonDefinitions: ButtonDefinition[] = [
+  const getTimerTooltip = () => {
+    const status = getTimerStatus();
+    const type =
+      currentTimerType === "COUNTDOWN"
+        ? "Cuenta Regresiva"
+        : "Cuenta Ascendente";
+    return `${currentTimerName}. Tipo: ${type}. Estado: ${status}.`;
+  };
+
+  const actionButtons: PanelButton[] = [
     {
-      icon: Plus,
+      icon: Timer,
+      tooltip: getTimerTooltip(),
+      onClick: () => {},
+      disabled: false,
+    },
+    {
+      icon: ClockPlus,
       tooltip: "Crear",
       onClick: handleCreate,
-      disabled: (isConnected) => !isConnected,
+      disabled: !isConnected,
     },
     {
       icon: Play,
       tooltip: isPaused ? "Reanudar" : "Iniciar",
       onClick: handleStart,
-      disabled: (isConnected, isActive, isPaused, isStopped) =>
-        !isConnected || (!isStopped && !isPaused),
+      disabled: !isConnected || (!isStopped && !isPaused),
     },
     {
-      icon: Redo,
+      icon: TimerReset,
       tooltip: "Restablecer",
       onClick: handleReset,
-      disabled: (isConnected) => !isConnected,
+      disabled: !isConnected,
     },
     {
       icon: Pause,
       tooltip: "Pausar",
       onClick: handlePause,
-      disabled: (isConnected, isActive, isPaused, isStopped) =>
-        !isConnected || !isActive || isPaused || isStopped,
+      disabled: !isConnected || !isActive || isPaused || isStopped,
     },
     {
       icon: Save,
       tooltip: "Guardar Estado",
       onClick: handleSaveState,
-      disabled: (isConnected) => !isConnected,
+      disabled: !isConnected,
     },
     {
       icon: Shuffle,
       tooltip: useSocket ? "Usando Socket" : "Usando HTTP",
       onClick: () => setUseSocket(!useSocket),
-      disabled: (isConnected) => !isConnected,
+      disabled: !isConnected,
     },
   ];
 
-  const donationButtons = [
+  const donationButtons: PanelButton[] = [
     {
       icon: Hash,
       tooltip: "Añadir Bits",
       onClick: () => handleAddTime("BITS"),
-      disabled: (isConnected) => !isConnected,
+      disabled: !isConnected,
     },
     {
       icon: Server,
       tooltip: "Añadir Raid",
       onClick: () => handleAddTime("RAID"),
-      disabled: (isConnected) => !isConnected,
+      disabled: !isConnected,
     },
     {
       icon: Gift,
       tooltip: "Añadir Sub",
       onClick: () => handleAddTime("SUBSCRIPTION"),
-      disabled: (isConnected) => !isConnected,
+      disabled: !isConnected,
     },
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 relative">
       {error && (
-        <div className="rounded-md border border-destructive bg-destructive/15 p-3 text-sm text-destructive">
-          <span className="font-medium">{error}</span>
-          <Button variant="ghost" onClick={handleCloseError}>
-            ×
-          </Button>
+        <div className="fixed bottom-0 left-1/2 -translate-x-1/2 z-50 w-full flex justify-center">
+          <Alert variant={error ? "destructive" : "default"} className="w-1/2">
+            <Trash2 onClick={handleCloseError} />
+            <AlertTitle>{error}</AlertTitle>
+          </Alert>
         </div>
       )}
 
-      <div className="flex items-center space-x-2">
-        <ThemeSelector />
-        {buttonDefinitions.map((button) => (
-          <TooltipProvider key={button.tooltip}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => button.onClick()}
-                  disabled={button.disabled(
-                    isConnected,
-                    isActive,
-                    isPaused,
-                    isStopped,
-                  )}
-                >
-                  <button.icon />
-                  <span className="sr-only">{button.tooltip}</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{button.tooltip}</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        ))}
+      <div className="fixed top-4 left-1/2 transform -translate-x-1/2 w-full max-w-md px-4 z-50 relative">
+        <div className="absolute right-0 top-0">
+          <ThemeSelector />
+        </div>
+
+        {/* Panel de botones centrado */}
+        <div className="flex flex-col items-center">
+          <ButtonPanel
+            topButtons={actionButtons}
+            bottomButtons={donationButtons}
+          />
+        </div>
       </div>
 
-      <div className="flex items-center space-x-2">
-        {donationButtons.map((button) => (
-          <TooltipProvider key={button.tooltip}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={button.onClick}
-                  disabled={button.disabled(isConnected)}
-                >
-                  <button.icon />
-                  <span className="sr-only">{button.tooltip}</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{button.tooltip}</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        ))}
-      </div>
-
-      <FloatingTimer timer={timer} formatTime={formatTime} />
+      <FloatingTimer formattedTime={formattedTime || formatTime(timer)} />
 
       {showCreateModal && (
         <CreateTimerModal
