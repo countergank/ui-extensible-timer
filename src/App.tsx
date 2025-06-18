@@ -1,32 +1,50 @@
+import { ButtonPanel, type PanelButton } from "@/components/ButtonPanel";
+import ThemeSelector from "@/components/ThemeSelector";
+import { Alert, AlertTitle } from "@/components/ui/alert";
+import { formatTime } from "@/lib/formatTime";
+import {
+  ClockPlus,
+  Gift,
+  Hash,
+  Pause,
+  Play,
+  Save,
+  Server,
+  Shuffle,
+  Timer,
+  TimerReset,
+  Trash2,
+} from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Socket } from "socket.io-client";
 import "./App.css";
 import { CreateTimerModal } from "./components/CreateTimerModal";
 import { FloatingTimer } from "./components/FloatingTimer";
+import { ThemeProvider } from "./context/ThemeContext";
 import TimerService from "./services/timerService";
 import type {
   DonationType,
-  SavedTimerState,
   TimerError,
   TimerState,
   TimerType,
 } from "./types/timer.types";
 
-function App() {
+function AppContent() {
   const [socket, setSocket] = useState<Socket | null>(null);
+
   const [timer, setTimer] = useState<number>(0);
   const [isActive, setIsActive] = useState<boolean>(false);
   const [isPaused, setIsPaused] = useState<boolean>(false);
   const [isStopped, setIsStopped] = useState<boolean>(true);
   const [isConnected, setIsConnected] = useState<boolean>(false);
-  const [timerType, setTimerType] = useState<TimerType>("COUNTDOWN");
   const [useSocket, setUseSocket] = useState<boolean>(true);
-  const [savedStates, setSavedStates] = useState<SavedTimerState[]>([]);
-  const [showSavedStates, setShowSavedStates] = useState<boolean>(false);
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
   const [currentTimerKey, setCurrentTimerKey] = useState<string>("main-timer");
   const [currentTimerName, setCurrentTimerName] =
     useState<string>("Main Timer");
+  const [currentTimerType, setCurrentTimerType] =
+    useState<TimerType>("COUNTDOWN");
+  const [formattedTime, setFormattedTime] = useState<string>("00:00:00");
   const [error, setError] = useState<string | null>(null);
 
   // Crear una referencia al timerService para evitar recrearlo en cada render
@@ -40,6 +58,8 @@ function App() {
       const isActive = status === "RUNNING";
       const isPaused = status === "PAUSED";
       const isStopped = status === "STOPPED";
+      const currentType = data.type;
+      const currentFormattedType = data.formattedTime;
 
       // CORREGIR: Usar directamente el tiempo que viene del servidor
       // NO mantener el tiempo anterior cuando se pausa
@@ -53,7 +73,8 @@ function App() {
       setIsActive(isActive);
       setIsPaused(isPaused);
       setIsStopped(isStopped);
-      setTimerType(data.type);
+      setCurrentTimerType(currentType);
+      setFormattedTime(currentFormattedType);
       setError(null); // Limpiar cualquier error previo
 
       // Si es countdown y llegó a 0, detener el timer
@@ -109,6 +130,7 @@ function App() {
             const defaultKey =
               import.meta.env.VITE_DEFAULT_TIMER_KEY || "main-timer";
 
+            setCurrentTimerType(defaultType);
             setCurrentTimerKey(defaultKey);
             setCurrentTimerName(
               timerServiceRef.current?.generateFriendlyName(
@@ -116,7 +138,6 @@ function App() {
                 defaultType,
               ) || "",
             );
-            setTimerType(defaultType);
             setTimer(defaultTime);
 
             return timerServiceRef.current?.createTimerSocket(
@@ -235,23 +256,6 @@ function App() {
     };
   }, [socket]);
 
-  const formatTime = (seconds: number | string | undefined): string => {
-    const parsedSeconds =
-      typeof seconds === "string" ? Number.parseInt(seconds, 10) : seconds;
-
-    if (
-      parsedSeconds === undefined ||
-      Number.isNaN(parsedSeconds) ||
-      parsedSeconds < 0
-    ) {
-      return "0:00";
-    }
-
-    const minutes = Math.floor(parsedSeconds / 60);
-    const remainingSeconds = Math.floor(parsedSeconds % 60);
-    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
-  };
-
   const handleCreate = () => {
     setShowCreateModal(true);
   };
@@ -264,7 +268,6 @@ function App() {
   ) => {
     setCurrentTimerKey(timerKey);
     setCurrentTimerName(timerName);
-    setTimerType(type);
 
     if (timerServiceRef.current) {
       timerServiceRef.current.setTimerInfo(timerKey, timerName);
@@ -325,35 +328,16 @@ function App() {
       return;
     }
 
-    const description = prompt("Descripción (opcional):");
+    const descriptionValue: string | undefined = prompt(
+      "Descripción (opcional):",
+    )?.trim();
+
     if (timerServiceRef.current) {
       timerServiceRef.current
-        .saveStateSocket(name.trim(), description?.trim() || undefined)
+        .saveStateSocket(name.trim(), descriptionValue)
         .catch(() => {
           setError("Error al guardar el estado");
         });
-    }
-  };
-
-  const handleLoadState = () => {
-    if (timerServiceRef.current) {
-      timerServiceRef.current.loadStateSocket().catch(() => {
-        setError("Error al cargar el estado");
-      });
-    }
-  };
-
-  const handleGetSavedStates = () => {
-    if (timerServiceRef.current) {
-      timerServiceRef.current
-        .getSavedStatesSocket()
-        .then((states) => {
-          setSavedStates(states);
-        })
-        .catch(() => {
-          setError("Error al obtener estados guardados");
-        });
-      setShowSavedStates(true);
     }
   };
 
@@ -386,172 +370,115 @@ function App() {
     }
   };
 
+  const getTimerStatus = () => {
+    if (!isConnected) return "Desconectado";
+    if (isStopped) return "Detenido";
+    if (isPaused) return "Pausado";
+    if (isActive) return "En ejecución";
+    return "Desconocido";
+  };
+
+  const getTimerTooltip = () => {
+    const status = getTimerStatus();
+    const type =
+      currentTimerType === "COUNTDOWN"
+        ? "Cuenta Regresiva"
+        : "Cuenta Ascendente";
+    return `${currentTimerName}. Tipo: ${type}. Estado: ${status}.`;
+  };
+
+  const actionButtons: PanelButton[] = [
+    {
+      icon: Timer,
+      tooltip: getTimerTooltip(),
+      onClick: () => {},
+      disabled: false,
+    },
+    {
+      icon: ClockPlus,
+      tooltip: "Crear",
+      onClick: handleCreate,
+      disabled: !isConnected,
+    },
+    {
+      icon: Play,
+      tooltip: isPaused ? "Reanudar" : "Iniciar",
+      onClick: handleStart,
+      disabled: !isConnected || (!isStopped && !isPaused),
+    },
+    {
+      icon: TimerReset,
+      tooltip: "Restablecer",
+      onClick: handleReset,
+      disabled: !isConnected,
+    },
+    {
+      icon: Pause,
+      tooltip: "Pausar",
+      onClick: handlePause,
+      disabled: !isConnected || !isActive || isPaused || isStopped,
+    },
+    {
+      icon: Save,
+      tooltip: "Guardar Estado",
+      onClick: handleSaveState,
+      disabled: !isConnected,
+    },
+    {
+      icon: Shuffle,
+      tooltip: useSocket ? "Usando Socket" : "Usando HTTP",
+      onClick: () => setUseSocket(!useSocket),
+      disabled: !isConnected,
+    },
+  ];
+
+  const donationButtons: PanelButton[] = [
+    {
+      icon: Hash,
+      tooltip: "Añadir Bits",
+      onClick: () => handleAddTime("BITS"),
+      disabled: !isConnected,
+    },
+    {
+      icon: Server,
+      tooltip: "Añadir Raid",
+      onClick: () => handleAddTime("RAID"),
+      disabled: !isConnected,
+    },
+    {
+      icon: Gift,
+      tooltip: "Añadir Sub",
+      onClick: () => handleAddTime("SUBSCRIPTION"),
+      disabled: !isConnected,
+    },
+  ];
+
   return (
-    <div className="overlay">
+    <div className="space-y-4 relative">
       {error && (
-        <div className="error-message">
-          <span>{error}</span>
-          <button
-            type="button"
-            onClick={handleCloseError}
-            className="close-error"
-          >
-            ×
-          </button>
+        <div className="fixed bottom-0 left-1/2 -translate-x-1/2 z-50 w-full flex justify-center">
+          <Alert variant={error ? "destructive" : "default"} className="w-1/2">
+            <Trash2 onClick={handleCloseError} />
+            <AlertTitle>{error}</AlertTitle>
+          </Alert>
         </div>
       )}
 
-      <div className="controls">
-        <button type="button" onClick={handleCreate} disabled={!isConnected}>
-          Crear
-        </button>
-        <button
-          type="button"
-          onClick={handleStart}
-          disabled={!isConnected || (!isStopped && !isPaused)}
-          title={
-            !isStopped && !isPaused
-              ? "El timer debe estar detenido o pausado para iniciar o reanudar"
-              : ""
-          }
-        >
-          {isPaused ? "Reanudar" : "Iniciar"}
-        </button>
-        <button
-          type="button"
-          onClick={handleReset}
-          disabled={!isConnected}
-          title="Restablecer el timer a su estado inicial"
-        >
-          Restablecer
-        </button>
-        <button
-          type="button"
-          onClick={handlePause}
-          disabled={!isConnected || !isActive || isPaused || isStopped}
-          title={!isActive ? "El timer debe estar activo para pausar" : ""}
-        >
-          Pausar
-        </button>
-        <button type="button" onClick={handleSaveState} disabled={!isConnected}>
-          Guardar Estado
-        </button>
-        <button
-          type="button"
-          onClick={() => handleLoadState()}
-          disabled={!isConnected}
-        >
-          Cargar Estado
-        </button>
-        <button
-          type="button"
-          onClick={handleGetSavedStates}
-          disabled={!isConnected}
-        >
-          Estados Guardados
-        </button>
-        <button
-          type="button"
-          onClick={() => setUseSocket(!useSocket)}
-          className={useSocket ? "socket-active" : "http-active"}
-        >
-          {useSocket ? "Usando Socket" : "Usando HTTP"}
-        </button>
-      </div>
+      <div className="fixed top-4 left-1/2 transform -translate-x-1/2 w-full max-w-md px-4 z-50 relative">
+        <div className="absolute right-0 top-0">
+          <ThemeSelector />
+        </div>
 
-      <div className="donation-controls">
-        <button
-          type="button"
-          onClick={() => handleAddTime("BITS")}
-          disabled={!isConnected}
-        >
-          Añadir Bits
-        </button>
-        <button
-          type="button"
-          onClick={() => handleAddTime("RAID")}
-          disabled={!isConnected}
-        >
-          Añadir Raid
-        </button>
-        <button
-          type="button"
-          onClick={() => handleAddTime("SUBSCRIPTION")}
-          disabled={!isConnected}
-        >
-          Añadir Sub
-        </button>
-      </div>
-
-      <FloatingTimer
-        timer={timer}
-        timerName={currentTimerName}
-        timerType={timerType}
-        isActive={isActive}
-        isPaused={isPaused}
-        isStopped={isStopped}
-        isConnected={isConnected}
-        formatTime={formatTime}
-      />
-
-      {showSavedStates && (
-        <>
-          <div
-            onKeyDown={() => {}}
-            onKeyUp={() => {}}
-            className="modal-overlay"
-            onClick={() => setShowSavedStates(false)}
+        {/* Panel de botones centrado */}
+        <div className="flex flex-col items-center">
+          <ButtonPanel
+            topButtons={actionButtons}
+            bottomButtons={donationButtons}
           />
-          <div className="saved-states">
-            <h3>Estados Guardados</h3>
-            <button type="button" onClick={() => setShowSavedStates(false)}>
-              Cerrar
-            </button>
-            {savedStates.length === 0 ? (
-              <p
-                style={{
-                  color: "#00ff00",
-                  textAlign: "center",
-                  padding: "20px",
-                }}
-              >
-                No hay estados guardados
-              </p>
-            ) : (
-              <ul>
-                {savedStates.map((state) => (
-                  <li
-                    key={state.timerKey}
-                    onClick={() => {
-                      if (timerServiceRef.current) {
-                        handleLoadState();
-                        setShowSavedStates(false);
-                      }
-                    }}
-                    onKeyDown={() => {}}
-                    onKeyUp={() => {}}
-                  >
-                    <div className="state-info">
-                      <span className="state-name">
-                        {state.timerName || state.timerName}
-                      </span>
-                      <span className="state-type">{state.type}</span>
-                      <span className="state-time">
-                        {formatTime(state.currentTime)}
-                      </span>
-                      {state?.description && (
-                        <span className="state-description">
-                          {state.description}
-                        </span>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </>
-      )}
+        </div>
+      </div>
+
+      <FloatingTimer formattedTime={formattedTime || formatTime(timer)} />
 
       {showCreateModal && (
         <CreateTimerModal
@@ -561,6 +488,14 @@ function App() {
         />
       )}
     </div>
+  );
+}
+
+function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
   );
 }
 

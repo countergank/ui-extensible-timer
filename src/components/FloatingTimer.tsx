@@ -1,120 +1,118 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { TimerType } from "../types/timer.types";
+import { useEffect, useState } from "react";
+import { Rnd } from "react-rnd";
 
 interface FloatingTimerProps {
-  timer: number;
-  timerName: string;
-  timerType: TimerType;
-  isActive: boolean;
-  isPaused: boolean;
-  isStopped: boolean;
-  isConnected: boolean;
-  formatTime: (seconds: number) => string;
+  formattedTime?: string;
 }
 
-export function FloatingTimer({
-  timer,
-  timerName,
-  timerType,
-  isActive,
-  isPaused,
-  isStopped,
-  isConnected,
-  formatTime,
-}: FloatingTimerProps) {
-  const [position, setPosition] = useState({ x: 20, y: 20 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const timerRef = useRef<HTMLDivElement>(null);
+export function FloatingTimer({ formattedTime }: FloatingTimerProps) {
+  const baseWidth = 300;
+  const baseHeight = 150;
 
-  // Cargar posición guardada al iniciar
+  const [size, setSize] = useState({ width: baseWidth, height: baseHeight });
+  const [position, setPosition] = useState({ x: 20, y: 20 });
+  const [loaded, setLoaded] = useState(false); // posición + tamaño
+
   useEffect(() => {
     const savedPosition = localStorage.getItem("timerPosition");
+    const savedSize = localStorage.getItem("timerSize");
+
+    let initialPosition = {
+      x: (window.innerWidth - baseWidth) / 2,
+      y: (window.innerHeight - baseHeight) / 2,
+    };
+
     if (savedPosition) {
-      setPosition(JSON.parse(savedPosition));
+      try {
+        const parsed = JSON.parse(savedPosition);
+        if (typeof parsed.x === "number" && typeof parsed.y === "number") {
+          initialPosition = parsed;
+        }
+      } catch (e) {
+        console.warn("Invalid position in localStorage", e);
+      }
     }
-  }, []);
 
-  // Guardar posición cuando cambia
-  useEffect(() => {
-    localStorage.setItem("timerPosition", JSON.stringify(position));
-  }, [position]);
-
-  const getTimerStatus = () => {
-    if (!isConnected) return "Desconectado";
-    if (isStopped) return "Detenido";
-    if (isPaused) return "Pausado";
-    if (isActive) return "En ejecución";
-    return "Desconocido";
-  };
-
-  const getTimerTooltip = () => {
-    const status = getTimerStatus();
-    const type =
-      timerType === "COUNTDOWN" ? "Cuenta Regresiva" : "Cuenta Ascendente";
-    return `${timerName}\nTipo: ${type}\nEstado: ${status}\nTiempo: ${formatTime(timer)}`;
-  };
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (timerRef.current) {
-      const rect = timerRef.current.getBoundingClientRect();
-      setDragOffset({
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
-      });
-      setIsDragging(true);
+    if (savedSize) {
+      try {
+        const parsed = JSON.parse(savedSize);
+        if (
+          typeof parsed.width === "number" &&
+          typeof parsed.height === "number"
+        ) {
+          setSize(parsed);
+        }
+      } catch (e) {
+        console.warn("Invalid size in localStorage", e);
+      }
     }
-  };
 
-  const handleMouseMove = useCallback(
-    (e: MouseEvent) => {
-      if (isDragging) {
+    setPosition(initialPosition);
+    setLoaded(true);
+
+    // Responsivo: actualizar posición centrada si no había guardado antes
+    const handleResize = () => {
+      if (!savedPosition) {
         setPosition({
-          x: e.clientX - dragOffset.x,
-          y: e.clientY - dragOffset.y,
+          x: (window.innerWidth - size.width) / 2,
+          y: (window.innerHeight - size.height) / 2,
         });
       }
-    },
-    [isDragging, dragOffset],
-  );
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-  }, []);
-
-  useEffect(() => {
-    if (isDragging) {
-      window.addEventListener("mousemove", handleMouseMove);
-      window.addEventListener("mouseup", handleMouseUp);
-    }
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isDragging, handleMouseUp, handleMouseMove]);
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [size.width, size.height]);
+
+  if (!loaded) return null;
 
   return (
-    <div
-      ref={timerRef}
-      className={`floating-timer ${isDragging ? "dragging" : ""}`}
-      style={{
-        position: "fixed",
-        left: `${position.x}px`,
-        top: `${position.y}px`,
-        cursor: isDragging ? "grabbing" : "grab",
+    <Rnd
+      default={{
+        x: position.x,
+        y: position.y,
+        width: size.width,
+        height: size.height,
       }}
-      onMouseDown={handleMouseDown}
-      title={getTimerTooltip()}
+      size={size}
+      onDragStop={(_, d) => {
+        const newPos = { x: d.x, y: d.y };
+        setPosition(newPos);
+        localStorage.setItem("timerPosition", JSON.stringify(newPos));
+      }}
+      onResizeStop={(e, direction, ref) => {
+        const newSize = {
+          width: ref.offsetWidth,
+          height: ref.offsetHeight,
+        };
+        setSize(newSize);
+        localStorage.setItem("timerSize", JSON.stringify(newSize));
+      }}
+      style={{
+        overflow: "hidden",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 0,
+        margin: 0,
+        border: "1px solid #ccc",
+      }}
     >
-      <div className="timer-labels">
-        <span className="timer-name">{timerName}</span>
-        <span className="timer-status">{getTimerStatus()}</span>
-      </div>
       <div
-        className={`timer ${isActive ? "active" : "inactive"} ${!isConnected ? "disconnected" : ""}`}
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          textAlign: "center",
+          fontWeight: "bold",
+          fontSize: `calc(min(${size.width}px, ${size.height}px) * 0.4)`,
+          lineHeight: 1,
+        }}
       >
-        {formatTime(timer)}
+        {formattedTime}
       </div>
-    </div>
+    </Rnd>
   );
 }
