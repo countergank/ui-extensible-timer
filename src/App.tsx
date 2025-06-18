@@ -14,7 +14,7 @@ import { CreateTimerModal } from "./components/CreateTimerModal";
 import { FloatingTimer } from "./components/FloatingTimer";
 import IconButton from "./components/IconButton";
 import ThemeSelector from "./components/ThemeSelector";
-import { ThemeProvider, useTheme } from "./context/ThemeContext";
+import { ThemeProvider } from "./context/ThemeContext";
 import TimerService from "./services/timerService";
 import type {
   DonationType,
@@ -24,8 +24,6 @@ import type {
 } from "./types/timer.types";
 
 function AppContent() {
-  const { theme } = useTheme();
-
   const [socket, setSocket] = useState<Socket | null>(null);
   const [timer, setTimer] = useState<number>(0);
   const [isActive, setIsActive] = useState<boolean>(false);
@@ -453,21 +451,17 @@ function AppContent() {
   ];
 
   return (
-    <div className={`overlay ${theme}`}>
+    <div>
       {error && (
-        <div className="error-message">
+        <div>
           <span>{error}</span>
-          <button
-            type="button"
-            onClick={handleCloseError}
-            className="close-error"
-          >
+          <button type="button" onClick={handleCloseError}>
             ×
           </button>
         </div>
       )}
 
-      <div className="controls">
+      <div>
         <ThemeSelector />
         {buttonDefinitions.map((button) => (
           <IconButton
@@ -485,7 +479,7 @@ function AppContent() {
         ))}
       </div>
 
-      <div className="donation-controls">
+      <div>
         {donationButtons.map((button) => (
           <IconButton
             key={button.tooltip}

@@ -1,6 +1,5 @@
 import { FaMoon, FaSun } from "react-icons/fa";
 import { useTheme } from "../context/ThemeContext";
-import "./ThemeSelector.css";
 
 const ThemeSelector = () => {
   const { theme, setTheme } = useTheme();
@@ -10,7 +9,7 @@ const ThemeSelector = () => {
   };
 
   return (
-    <button type="button" onClick={toggleTheme} className="theme-toggle">
+    <button type="button" onClick={toggleTheme}>
       {theme === "dark" ? <FaSun /> : <FaMoon />}
     </button>
   );

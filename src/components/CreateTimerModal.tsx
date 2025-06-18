@@ -1,16 +1,25 @@
-import { useState } from 'react';
-import type { TimerType } from '../types/timer.types';
+import { useState } from "react";
+import type { TimerType } from "../types/timer.types";
 
 interface CreateTimerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (timerKey: string, timerName: string, type: TimerType, initialTime?: number) => void;
+  onCreate: (
+    timerKey: string,
+    timerName: string,
+    type: TimerType,
+    initialTime?: number,
+  ) => void;
 }
 
-export function CreateTimerModal({ isOpen, onClose, onCreate }: CreateTimerModalProps) {
-  const [timerKey, setTimerKey] = useState('');
-  const [timerName, setTimerName] = useState('');
-  const [timerType, setTimerType] = useState<TimerType>('COUNTDOWN');
+export function CreateTimerModal({
+  isOpen,
+  onClose,
+  onCreate,
+}: CreateTimerModalProps) {
+  const [timerKey, setTimerKey] = useState("");
+  const [timerName, setTimerName] = useState("");
+  const [timerType, setTimerType] = useState<TimerType>("COUNTDOWN");
   const [initialMinutes, setInitialMinutes] = useState<number>(0);
 
   if (!isOpen) return null;
@@ -20,19 +29,19 @@ export function CreateTimerModal({ isOpen, onClose, onCreate }: CreateTimerModal
     // Convert minutes to seconds before passing to parent
     const initialTimeInSeconds = initialMinutes * 60;
     onCreate(timerKey, timerName, timerType, initialTimeInSeconds);
-    setTimerKey('');
-    setTimerName('');
-    setTimerType('COUNTDOWN');
+    setTimerKey("");
+    setTimerName("");
+    setTimerType("COUNTDOWN");
     setInitialMinutes(0);
     onClose();
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content">
+    <div>
+      <div>
         <h2>Crear Nuevo Temporizador</h2>
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
+          <div>
             <label htmlFor="timerKey">Identificador:</label>
             <input
               type="text"
@@ -43,7 +52,7 @@ export function CreateTimerModal({ isOpen, onClose, onCreate }: CreateTimerModal
               placeholder="Ingrese el identificador"
             />
           </div>
-          <div className="form-group">
+          <div>
             <label htmlFor="timerName">Nombre:</label>
             <input
               type="text"
@@ -53,7 +62,7 @@ export function CreateTimerModal({ isOpen, onClose, onCreate }: CreateTimerModal
               placeholder="Ingrese el nombre (opcional)"
             />
           </div>
-          <div className="form-group">
+          <div>
             <label htmlFor="timerType">Tipo:</label>
             <select
               id="timerType"
@@ -64,7 +73,7 @@ export function CreateTimerModal({ isOpen, onClose, onCreate }: CreateTimerModal
               <option value="COUNTUP">Cuenta Ascendente</option>
             </select>
           </div>
-          <div className="form-group">
+          <div>
             <label htmlFor="initialTime">Tiempo Inicial (minutos):</label>
             <input
               type="number"
@@ -75,9 +84,11 @@ export function CreateTimerModal({ isOpen, onClose, onCreate }: CreateTimerModal
               placeholder="Ingrese el tiempo inicial en minutos (opcional)"
             />
           </div>
-          <div className="modal-buttons">
+          <div>
             <button type="submit">Crear</button>
-            <button type="button" onClick={onClose}>Cancelar</button>
+            <button type="button" onClick={onClose}>
+              Cancelar
+            </button>
           </div>
         </form>
       </div>

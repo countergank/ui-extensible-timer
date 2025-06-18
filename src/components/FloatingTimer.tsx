@@ -98,7 +98,6 @@ export function FloatingTimer({
     <Tooltip text={getTimerTooltip()}>
       <div
         ref={timerRef}
-        className={`floating-timer ${isDragging ? "dragging" : ""}`}
         style={{
           position: "fixed",
           left: `${position.x}px`,

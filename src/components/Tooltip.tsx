@@ -1,6 +1,5 @@
 import type React from "react";
 import { useState } from "react";
-import "./Tooltip.css";
 
 interface TooltipProps {
   text: string;
@@ -12,12 +11,11 @@ const Tooltip: React.FC<TooltipProps> = ({ text, children }) => {
 
   return (
     <div
-      className="tooltip-container"
       onMouseEnter={() => setIsTooltipVisible(true)}
       onMouseLeave={() => setIsTooltipVisible(false)}
     >
       {children}
-      {isTooltipVisible && <div className="tooltip">{text}</div>}
+      {isTooltipVisible && <div>{text}</div>}
     </div>
   );
 };
