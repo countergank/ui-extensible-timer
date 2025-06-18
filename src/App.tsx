@@ -1,19 +1,17 @@
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Pause, Play, Plus, Redo, Save, Shuffle } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { IconType } from "react-icons";
-import {
-  FaPause,
-  FaPlay,
-  FaPlus,
-  FaRandom,
-  FaRedo,
-  FaSave,
-} from "react-icons/fa";
 import type { Socket } from "socket.io-client";
 import "./App.css";
 import { CreateTimerModal } from "./components/CreateTimerModal";
 import { FloatingTimer } from "./components/FloatingTimer";
-import IconButton from "./components/IconButton";
 import ThemeSelector from "./components/ThemeSelector";
 import { ThemeProvider } from "./context/ThemeContext";
 import TimerService from "./services/timerService";
@@ -391,39 +389,39 @@ function AppContent() {
 
   const buttonDefinitions: ButtonDefinition[] = [
     {
-      icon: FaPlus,
+      icon: Plus,
       tooltip: "Crear",
       onClick: handleCreate,
       disabled: (isConnected) => !isConnected,
     },
     {
-      icon: FaPlay,
+      icon: Play,
       tooltip: isPaused ? "Reanudar" : "Iniciar",
       onClick: handleStart,
       disabled: (isConnected, isActive, isPaused, isStopped) =>
         !isConnected || (!isStopped && !isPaused),
     },
     {
-      icon: FaRedo,
+      icon: Redo,
       tooltip: "Restablecer",
       onClick: handleReset,
       disabled: (isConnected) => !isConnected,
     },
     {
-      icon: FaPause,
+      icon: Pause,
       tooltip: "Pausar",
       onClick: handlePause,
       disabled: (isConnected, isActive, isPaused, isStopped) =>
         !isConnected || !isActive || isPaused || isStopped,
     },
     {
-      icon: FaSave,
+      icon: Save,
       tooltip: "Guardar Estado",
       onClick: handleSaveState,
       disabled: (isConnected) => !isConnected,
     },
     {
-      icon: FaRandom,
+      icon: Shuffle,
       tooltip: useSocket ? "Usando Socket" : "Usando HTTP",
       onClick: () => setUseSocket(!useSocket),
       disabled: (isConnected) => !isConnected,
@@ -432,19 +430,19 @@ function AppContent() {
 
   const donationButtons = [
     {
-      icon: FaPlus,
+      icon: Plus,
       tooltip: "Añadir Bits",
       onClick: () => handleAddTime("BITS"),
       disabled: (isConnected) => !isConnected,
     },
     {
-      icon: FaPlus,
+      icon: Plus,
       tooltip: "Añadir Raid",
       onClick: () => handleAddTime("RAID"),
       disabled: (isConnected) => !isConnected,
     },
     {
-      icon: FaPlus,
+      icon: Plus,
       tooltip: "Añadir Sub",
       onClick: () => handleAddTime("SUBSCRIPTION"),
       disabled: (isConnected) => !isConnected,
@@ -452,41 +450,63 @@ function AppContent() {
   ];
 
   return (
-    <div>
+    <div className="space-y-4">
       {error && (
-        <div>
-          <span>{error}</span>
-          <Button onClick={handleCloseError}>×</Button>
+        <div className="rounded-md border border-destructive bg-destructive/15 p-3 text-sm text-destructive">
+          <span className="font-medium">{error}</span>
+          <Button variant="ghost" onClick={handleCloseError}>
+            ×
+          </Button>
         </div>
       )}
 
-      <div>
+      <div className="flex items-center space-x-2">
         <ThemeSelector />
         {buttonDefinitions.map((button) => (
-          <IconButton
-            key={button.tooltip}
-            icon={<button.icon />}
-            tooltip={button.tooltip}
-            onClick={button.onClick}
-            disabled={button.disabled(
-              isConnected,
-              isActive,
-              isPaused,
-              isStopped,
-            )}
-          />
+          <TooltipProvider key={button.tooltip}>
+            <Tooltip delayDuration={50}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => button.onClick()}
+                  disabled={button.disabled(
+                    isConnected,
+                    isActive,
+                    isPaused,
+                    isStopped,
+                  )}
+                >
+                  <button.icon />
+                  <span className="sr-only">{button.tooltip}</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent className="bg-popover text-popover-foreground">
+                {button.tooltip}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         ))}
       </div>
 
-      <div>
+      <div className="flex items-center space-x-2">
         {donationButtons.map((button) => (
-          <IconButton
-            key={button.tooltip}
-            icon={<button.icon />}
-            tooltip={button.tooltip}
-            onClick={button.onClick}
-            disabled={button.disabled(isConnected)}
-          />
+          <TooltipProvider key={button.tooltip}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={button.onClick}
+                  disabled={button.disabled(isConnected)}
+                >
+                  <button.icon />
+                  <span className="sr-only">{button.tooltip}</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{button.tooltip}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         ))}
       </div>
 

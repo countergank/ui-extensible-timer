@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { TimerType } from "../types/timer.types";
-import Tooltip from "./Tooltip";
+import { Tooltip } from "./Tooltip";
 
 interface FloatingTimerProps {
   timer: number;
@@ -98,11 +98,13 @@ export function FloatingTimer({
     <Tooltip text={getTimerTooltip()}>
       <div
         ref={timerRef}
+        className="rounded-md border bg-background text-foreground shadow-md"
         style={{
           position: "fixed",
           left: `${position.x}px`,
           top: `${position.y}px`,
           cursor: isDragging ? "grabbing" : "grab",
+          padding: "0.5rem",
         }}
         onMouseDown={handleMouseDown}
       >

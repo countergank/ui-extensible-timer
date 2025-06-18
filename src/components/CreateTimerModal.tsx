@@ -1,4 +1,21 @@
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useState } from "react";
 import type { TimerType } from "../types/timer.types";
 
@@ -38,13 +55,20 @@ export function CreateTimerModal({
   };
 
   return (
-    <div>
-      <div>
-        <h2>Crear Nuevo Temporizador</h2>
-        <form onSubmit={handleSubmit}>
-          <div>
-            <label htmlFor="timerKey">Identificador:</label>
-            <input
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Crear Nuevo Temporizador</DialogTitle>
+          <DialogDescription>
+            Crea un nuevo temporizador con las siguientes opciones.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="flex flex-col space-y-4">
+          <div className="grid gap-2">
+            <Label htmlFor="timerKey" className="text-right">
+              Identificador:
+            </Label>
+            <Input
               type="text"
               id="timerKey"
               value={timerKey}
@@ -53,9 +77,11 @@ export function CreateTimerModal({
               placeholder="Ingrese el identificador"
             />
           </div>
-          <div>
-            <label htmlFor="timerName">Nombre:</label>
-            <input
+          <div className="grid gap-2">
+            <Label htmlFor="timerName" className="text-right">
+              Nombre:
+            </Label>
+            <Input
               type="text"
               id="timerName"
               value={timerName}
@@ -63,20 +89,25 @@ export function CreateTimerModal({
               placeholder="Ingrese el nombre (opcional)"
             />
           </div>
-          <div>
-            <label htmlFor="timerType">Tipo:</label>
-            <select
-              id="timerType"
-              value={timerType}
-              onChange={(e) => setTimerType(e.target.value as TimerType)}
-            >
-              <option value="COUNTDOWN">Cuenta Regresiva</option>
-              <option value="COUNTUP">Cuenta Ascendente</option>
-            </select>
+          <div className="grid gap-2">
+            <Label htmlFor="timerType" className="text-right">
+              Tipo:
+            </Label>
+            <Select onValueChange={(value) => setTimerType(value as TimerType)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Selecciona un tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="COUNTDOWN">Cuenta Regresiva</SelectItem>
+                <SelectItem value="COUNTUP">Cuenta Ascendente</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <div>
-            <label htmlFor="initialTime">Tiempo Inicial (minutos):</label>
-            <input
+          <div className="grid gap-2">
+            <Label htmlFor="initialTime" className="text-right">
+              Tiempo Inicial (minutos):
+            </Label>
+            <Input
               type="number"
               id="initialTime"
               value={initialMinutes}
@@ -85,14 +116,14 @@ export function CreateTimerModal({
               placeholder="Ingrese el tiempo inicial en minutos (opcional)"
             />
           </div>
-          <div>
+          <DialogFooter>
             <Button type="submit">Crear</Button>
-            <Button type="button" onClick={onClose}>
+            <Button type="button" variant="secondary" onClick={onClose}>
               Cancelar
             </Button>
-          </div>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
